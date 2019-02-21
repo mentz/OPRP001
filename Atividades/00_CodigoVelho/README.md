@@ -8,10 +8,10 @@ otimização.
 
 Código de ray tracing com cena simples.
 
-## FloodFill (a escrever)
+## Multiplicação de matrizes
 
-Algoritmo de preenchimento de vizinhança.
+Algoritmo de multiplicação de matrizes naïve O(n^3).
 
-## StringSearch (a traduzir)
+## StringSearch naïve (a traduzir)
 
 Contador de ocorrências de palavra em um texto.
