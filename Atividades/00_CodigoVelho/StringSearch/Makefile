@@ -9,9 +9,9 @@ compile:
 	$(CC) $(FILE) -o $(OUT) $(FLAGS)
 
 prep:
-	test -x big.txt && wget https://norvig.com/big.txt
+	test ! -e big.txt && wget https://norvig.com/big.txt
 
 test:
-	bash -c "trap times EXIT; ./stringsearch and big.txt"
+	bash -c "trap times EXIT; ./stringsearch \"and\" big.txt"
 
 .PHONY: ALL

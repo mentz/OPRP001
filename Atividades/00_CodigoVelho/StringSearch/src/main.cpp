@@ -15,6 +15,7 @@ uint buscaOcorrencias(std::string palavra, std::string texto) {
         for (int j = 0; j < palavra.size() && i+j < texto.size(); j++) {
         	if (texto[i+j] != palavra[j]) {
             	deuMatch = false;
+                break;
             }
         }
 
