@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 
     matrix_t *or = matrix_sort(rm);
 
-    matrix_print(or);
+    // matrix_print(or);
     // END Do something
 
     end_time = wtime();

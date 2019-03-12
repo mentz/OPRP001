@@ -1,7 +1,7 @@
 # GNU Makefile
 
 CC = gcc
-CCFLAGS = -Wall
+CCFLAGS = -Wall -pg
 LDFLAGS =
 TARGET = main
 
@@ -12,12 +12,13 @@ TARGET = main
 	$(CC) $(LDFLAGS) $^ -o $@
 
 all: $(TARGET)
+.PHONY: all
 
 # Dependencias
 
-main: matrix.o utils.o main.c
+main: clean matrix.o utils.o main.c
 matrix.o: matrix.c matrix.h
 utils.o: utils.c utils.h
 
 clean:
-	rm -f *.o *~ $(TARGET)
+	rm -f *.o *~ *.out $(TARGET)
