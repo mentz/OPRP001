@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <pthread.h>
 #include "matrix.h"
 #include "utils.h"
 
@@ -103,6 +104,66 @@ void matrix_print(matrix_t *m)
         printf("\n");
     }
     fflush(stdout);
+}
+
+typedef struct {
+    double *A;
+    double *B;
+    double *C;
+    int len;
+} matrix_sum_args;
+
+void *matrix_sum_worker(void *args) {
+    matrix_sum_args *margs = (matrix_sum_args *) args;
+    int i;
+
+    for (i = 0; i <  margs->len; i++) {
+        margs->C[i] = margs->A[i] + margs->B[i];
+    }
+
+    return NULL;
+}
+
+matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, int num_threads) {
+    // Checar se a soma é possível
+    if (A->rows != B->rows || A->cols != B->cols) {
+        printf("Matrizes de formato incompativel\n");
+        return NULL;
+    }
+
+    int i;
+    matrix_t * ret = NULL;
+    int newRows = A->rows;
+    int newCols = A->cols;
+    ret = (matrix_t *) matrix_create(newRows, newCols);
+
+
+    matrix_sum_args *args = NULL;
+    pthread_t *threads = NULL;
+
+    args = (matrix_sum_args *) malloc(sizeof(matrix_sum_args) * num_threads);
+    threads = (pthread_t *) malloc(sizeof(pthread_t) * num_threads);
+
+    int particao_size = (newRows * newCols) / num_threads;
+
+    for (i = 0; i < num_threads; i++) {
+        args[i].A = A->data[0] + i * particao_size;
+        args[i].B = B->data[0] + i * particao_size;
+        args[i].C = ret->data[0] + i * particao_size;
+
+        args[i].len = partition_size;
+    }
+    args[num_threads - 1].len += (newRows * newCols) % partition_size;
+
+    for (i = 0; i < num_threads; i++) {
+        pthread_create(&threads[i], NULL, matrix_sum_worker, (void *) args[i]);
+    }
+
+    for (i = 0; i < num_threads; i++) {
+        pthread_join(&threads[i], NULL);
+    }
+
+    return ret;
 }
 
 matrix_t *matrix_sum(matrix_t *A, matrix_t *B)
