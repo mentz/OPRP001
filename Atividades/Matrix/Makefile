@@ -1,8 +1,8 @@
 # GNU Makefile
 
 CC = gcc
-CCFLAGS = -Wall -pg
-LDFLAGS =
+CCFLAGS = -Wall
+LDFLAGS = -pthread
 TARGET = main
 
 %.o: %.c
@@ -15,8 +15,7 @@ all: $(TARGET)
 .PHONY: all
 
 # Dependencias
-
-main: clean matrix.o utils.o main.c
+main: matrix.o utils.o main.c
 matrix.o: matrix.c matrix.h
 utils.o: utils.c utils.h
 

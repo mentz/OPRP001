@@ -11,6 +11,20 @@ typedef struct {
       int cols;
 } matrix_t;
 
+typedef struct {
+    double *A;
+    double *B;
+    double *C;
+    int len;
+} matrix_sum_args_t;
+
+typedef struct {
+    matrix_t *A;
+    matrix_t *B;
+    matrix_t *C;
+    int i0, i1;
+} matrix_mult_args_t;
+
 /*
  * All functions must return a new matriz (when need)
  */
@@ -24,7 +38,15 @@ void matrix_randfill(matrix_t *m);
 
 void matrix_fill(matrix_t *m, double val);
 
+void *matrix_multiply_worker(void *args);
+
+matrix_t *matrix_multiply_threaded(matrix_t *A, matrix_t *B, int num_threads);
+
 matrix_t *matrix_multiply(matrix_t *A, matrix_t *B);
+
+void *matrix_sum_worker(void *args);
+
+matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, int num_threads);
 
 matrix_t *matrix_sum(matrix_t *A, matrix_t *B);
 

@@ -4,8 +4,6 @@
 #include <sys/time.h>
 #include "matrix.h"
 
-void * thread_job_soma
-
 double wtime()
 {
     struct timeval t;
@@ -31,17 +29,22 @@ int main(int argc, char **argv)
 
     //Do something
     matrix_t * a = (matrix_t *) matrix_create(nrows, ncols);
+    // matrix_fill(a, 1.0);
     matrix_randfill(a);
     matrix_t * b = (matrix_t *) matrix_create(nrows, ncols);
-    matrix_fill(b, 1.0);
+    // matrix_fill(b, 1.0);
+    matrix_randfill(b);
 
     // matrix_t *rm = matrix_multiply(a, b);
+    matrix_t *rm = matrix_multiply_threaded(a, b, nthreads);
+    // matrix_print(rm);
+
     // matrix_t *rs = matrix_sum(a, b);
-    matrix_t *rs = matrix_sum_threaded(a, b, num_threads);
+    // matrix_t *rs = matrix_sum_threaded(a, b, nthreads);
 
-    // matrix_t *or = matrix_sort(rm);
+    matrix_t *or = matrix_sort(rm);
 
-    // matrix_print(or);
+    matrix_print(or);
     // END Do something
 
     end_time = wtime();
@@ -51,6 +54,3 @@ int main(int argc, char **argv)
 
     return EXIT_SUCCESS;
 }
-
-
-void *

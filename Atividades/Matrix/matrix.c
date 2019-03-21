@@ -67,6 +67,68 @@ void matrix_fill(matrix_t *m, double val)
     }
 }
 
+void *matrix_multiply_worker(void *args)
+{
+    matrix_mult_args_t *margs = (matrix_mult_args_t *) args;
+
+    int i, j, k;
+
+    for(i = margs->i0; i < margs->i1; i++) {
+        for(j = 0; j < margs->A->cols; j++) {
+            double sum = 0;
+            for(k = 0; k < margs->A->rows; k++) {
+                sum += margs->A->data[i][k] * margs->B->data[k][j];
+            }
+            margs->C->data[i][j] = sum;
+        }
+    }
+
+    return NULL;
+}
+
+matrix_t *matrix_multiply_threaded(matrix_t *A, matrix_t *B, int num_threads)
+{
+    // Checar se a multiplicação é possível
+    if (A->cols != B->rows) {
+        printf("Matrizes de formato incompativel\n");
+        return NULL;
+    }
+    
+    int i;
+    matrix_t * ret = NULL;
+    int newRows = A->rows;
+    int newCols = B->cols;
+    ret = (matrix_t *) matrix_create(newRows, newCols);
+
+    matrix_mult_args_t *args = NULL;
+    pthread_t *threads = NULL;
+
+    args = (matrix_mult_args_t *) malloc(sizeof(matrix_mult_args_t) * num_threads);
+    threads = (pthread_t *) malloc(sizeof(pthread_t) * num_threads);
+
+    int partition_size = newRows / num_threads;
+
+    for (i = 0; i < num_threads; i++) {
+        args[i].A = A;
+        args[i].B = B;
+        args[i].C = ret;
+
+        args[i].i0 = partition_size * i;
+        args[i].i1 = partition_size * (i+1);
+    }
+    args[num_threads - 1].i1 = newRows;
+
+    for (i = 0; i < num_threads; i++) {
+        pthread_create(&threads[i], NULL, matrix_multiply_worker, (void *) &args[i]);
+    }
+
+    for (i = 0; i < num_threads; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    return ret;
+}
+
 matrix_t *matrix_multiply(matrix_t *A, matrix_t *B)
 {
     // Checar se a multiplicação é possível
@@ -94,34 +156,15 @@ matrix_t *matrix_multiply(matrix_t *A, matrix_t *B)
     return ret;
 }
 
-void matrix_print(matrix_t *m)
-{
-    int i, j;
-    for (i = 0; i < m->rows; i++) {
-        for (j = 0; j < m->cols; j++) {
-            printf("%.17f ", m->data[i][j]);
-        }
-        printf("\n");
-    }
-    fflush(stdout);
-}
-
-typedef struct {
-    double *A;
-    double *B;
-    double *C;
-    int len;
-} matrix_sum_args;
-
 void *matrix_sum_worker(void *args) {
-    matrix_sum_args *margs = (matrix_sum_args *) args;
+    matrix_sum_args_t *margs = (matrix_sum_args_t *) args;
     int i;
 
     for (i = 0; i <  margs->len; i++) {
         margs->C[i] = margs->A[i] + margs->B[i];
     }
 
-    return NULL;
+return NULL;
 }
 
 matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, int num_threads) {
@@ -137,30 +180,29 @@ matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, int num_threads) {
     int newCols = A->cols;
     ret = (matrix_t *) matrix_create(newRows, newCols);
 
-
-    matrix_sum_args *args = NULL;
+    matrix_sum_args_t *args = NULL;
     pthread_t *threads = NULL;
 
-    args = (matrix_sum_args *) malloc(sizeof(matrix_sum_args) * num_threads);
+    args = (matrix_sum_args_t *) malloc(sizeof(matrix_sum_args_t) * num_threads);
     threads = (pthread_t *) malloc(sizeof(pthread_t) * num_threads);
 
-    int particao_size = (newRows * newCols) / num_threads;
+    int partition_size = (newRows * newCols) / num_threads;
 
     for (i = 0; i < num_threads; i++) {
-        args[i].A = A->data[0] + i * particao_size;
-        args[i].B = B->data[0] + i * particao_size;
-        args[i].C = ret->data[0] + i * particao_size;
+        args[i].A = A->data[0] + i * partition_size;
+        args[i].B = B->data[0] + i * partition_size;
+        args[i].C = ret->data[0] + i * partition_size;
 
         args[i].len = partition_size;
     }
     args[num_threads - 1].len += (newRows * newCols) % partition_size;
 
     for (i = 0; i < num_threads; i++) {
-        pthread_create(&threads[i], NULL, matrix_sum_worker, (void *) args[i]);
+        pthread_create(&threads[i], NULL, matrix_sum_worker, (void *) &args[i]);
     }
 
     for (i = 0; i < num_threads; i++) {
-        pthread_join(&threads[i], NULL);
+        pthread_join(threads[i], NULL);
     }
 
     return ret;
@@ -198,6 +240,19 @@ matrix_t *matrix_sort(matrix_t *A)
     memcpy(ret->data[0], A->data[0], sizeof(double) * A->rows * A->cols);
 
     bubble_sort(ret->data[0], A->rows * A->cols);
+    // dMergeSort(ret->data[0], A->rows * A->cols);
 
     return ret;
+}
+
+void matrix_print(matrix_t *m)
+{
+    int i, j;
+    for (i = 0; i < m->rows; i++) {
+        for (j = 0; j < m->cols; j++) {
+            printf("%.17f ", m->data[i][j]);
+        }
+        printf("\n");
+    }
+    fflush(stdout);
 }

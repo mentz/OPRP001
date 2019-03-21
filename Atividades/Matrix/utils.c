@@ -1,10 +1,14 @@
 #include "utils.h"
 
-/*
 // ISSO É O SONHO
+
+void swap(double * a, double * b) {
+    double c = *a; *a = *b; *b = c;
+}
+
 void dMergeSort(double * vec, size_t arr_size)
 {
-    partition(vec, 0, arr_size);
+    partition(vec, 0, arr_size - 1);
 }
 
 void partition(double * vec, int start, int end)
@@ -19,26 +23,31 @@ void partition(double * vec, int start, int end)
     merge(vec, start, middle, end);
 }
 
-double merge(double * vec, int start, int middle, int end)
+void merge(double * vec, int start, int middle, int end)
 {
-    int left = start;
-    int right = middle + 1;
-    int l = start, ll = middle;
-    int r = middle + 1, rr = end - 1;
-    int k = end - start - 1;
+    double *lv = malloc(sizeof(double) * (middle - start + 1));
+    memcpy(lv, &vec[start], middle-start);
+    double *rv = malloc(sizeof(double) * (end - middle + 1));
+    memcpy(rv, &vec[middle], end-middle);
+    int l = start;
+    int r = middle;
+    int k = start;
 
-    while (k--) {
-        if (l >= ll || r >= rr) break;
-
-        if (vec[l] < vec[r]) {
-
+    while (l <= middle && r <= end) {
+        if (lv[l] < rv[r]) {
+            vec[k++] = lv[l++];
+        } else {
+            vec[k++] = rv[r++];
         }
     }
-}
-*/
 
-void swap(double * a, double * b) {
-    double c = *a; *a = *b; *b = c;
+    while (l <= middle) {
+        vec[k++] = lv[l++];
+    }
+
+    while (l <= middle) {
+        vec[k++] = lv[l++];
+    }
 }
 
 void bubble_sort(double * vec, size_t arr_size) {
