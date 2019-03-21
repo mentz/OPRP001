@@ -41,15 +41,14 @@ void matrix_fill(matrix_t *m, double val);
 void *matrix_multiply_worker(void *args);
 
 matrix_t *matrix_multiply_threaded(matrix_t *A, matrix_t *B, int num_threads);
-
 matrix_t *matrix_multiply(matrix_t *A, matrix_t *B);
 
 void *matrix_sum_worker(void *args);
 
 matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, int num_threads);
-
 matrix_t *matrix_sum(matrix_t *A, matrix_t *B);
 
+matrix_t *matrix_sort_threaded(matrix_t *A, int num_threads);
 matrix_t *matrix_sort(matrix_t *A);
 
 void matrix_print(matrix_t *m);

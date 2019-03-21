@@ -231,6 +231,20 @@ matrix_t *matrix_sum(matrix_t *A, matrix_t *B)
     return ret;
 }
 
+matrix_t *matrix_sort_threaded(matrix_t *A, int num_threads)
+{
+    matrix_t * ret = NULL;
+    ret = (matrix_t *) matrix_create(A->rows, A->cols);
+
+    memcpy(ret->data, A->data, sizeof(double *) * A->rows);
+    memcpy(ret->data[0], A->data[0], sizeof(double) * A->rows * A->cols);
+
+    // bubble_sort(ret->data[0], A->rows * A->cols);
+    merge_sort_threaded(ret->data[0], A->rows * A->cols, num_threads);
+
+    return ret;
+}
+
 matrix_t *matrix_sort(matrix_t *A)
 {
     matrix_t * ret = NULL;
@@ -239,8 +253,8 @@ matrix_t *matrix_sort(matrix_t *A)
     memcpy(ret->data, A->data, sizeof(double *) * A->rows);
     memcpy(ret->data[0], A->data[0], sizeof(double) * A->rows * A->cols);
 
-    bubble_sort(ret->data[0], A->rows * A->cols);
-    // dMergeSort(ret->data[0], A->rows * A->cols);
+    // bubble_sort(ret->data[0], A->rows * A->cols);
+    merge_sort(ret->data[0], A->rows * A->cols);
 
     return ret;
 }
