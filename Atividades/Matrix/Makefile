@@ -1,23 +1,16 @@
 # GNU Makefile
 
 CC = gcc
-CCFLAGS = -Wall
-LDFLAGS = -pthread
+LDFLAGS = -Wall -pthread -lm
 TARGET = main
+FILES = src/matrix.c src/utils.c src/main.c
 
-%.o: %.c
-	$(CC) $(CCFLAGS) -c $<
-
-%: %.o
-	$(CC) $(LDFLAGS) $^ -o $@
-
-all: $(TARGET)
-.PHONY: all
+all: $(FILES)
+	$(CC) -o $(TARGET) $(FILES) $(LDFLAGS)
 
 # Dependencias
-main: matrix.o utils.o main.c
-matrix.o: matrix.c matrix.h
-utils.o: utils.c utils.h
 
 clean:
-	rm -f *.o *~ *.out $(TARGET)
+	rm -f $(TARGET)
+
+.PHONY: all clean

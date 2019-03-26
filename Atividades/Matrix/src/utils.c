@@ -11,7 +11,7 @@ void merge_sort_threaded(double * vec, size_t arr_size, int num_threads)
     partition_task_t task;
     task.vec = vec;
     task.number = 0;
-    task.mythreads = num_threads;
+    task.mythreads = (int)round((double)num_threads/2.0);
     task.start = 0;
     task.end = arr_size;
     partition_worker((void *) &task);

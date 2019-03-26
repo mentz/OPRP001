@@ -1,5 +1,6 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
