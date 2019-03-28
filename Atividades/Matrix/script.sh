@@ -1,12 +1,23 @@
 # Script para benchmark 
 
-rm -r saida/
-mkdir saida/
+# rm -r saida/
+# mkdir saida/
 
-for  in $(seq 1 12)
+for teste in $(seq 1 10)
 do
-    for i in $(seq 1 10)
+    # for cpus in $(seq 12 -1 1)
+    # do
+    #     printf "sum com %dcpus, iteracao %d\n" ${cpus} ${teste}
+    #     ./main sum 10000 10000 ${cpus} >> saida/sum_${cpus}.txt
+    # done
+    # for cpus in $(seq 12 -1 1)
+    # do
+    #     printf "sort com %dcpus, iteracao %d\n" ${cpus} ${teste}
+    #     ./main sort 6000 6000 ${cpus} >> saida/sort_${cpus}.txt
+    # done
+    for cpus in $(seq 12 -1 1)
     do
-        ./main mult 5000 5000 $i >> mult_${i}.txt
-        ./main sum  5000 5000 $i >> sum_${i}.txt
-        ./main sort 5000 5000 $i >> sort_${i}
+        printf "mult com %dcpus, iteracao %d\n" ${cpus} ${teste}
+        ./main mult 2000 2000 ${cpus} >> saida/mult_${cpus}.txt
+    done
+done

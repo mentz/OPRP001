@@ -37,21 +37,21 @@ int main(int argc, char **argv)
     matrix_t * a = (matrix_t *) matrix_create(nrows, ncols);
     matrix_randfill(a);
 
-    if (strcmp(oper, "sum")) {
+    if (strcmp(oper, "sum") == 0) {
         matrix_t * b = (matrix_t *) matrix_create(nrows, ncols);
         matrix_randfill(b);
         start_time = wtime();
         matrix_sum_threaded(a, b, nthreads);
     }
 
-    if (strcmp(oper, "mult")) {
+    if (strcmp(oper, "mult") == 0) {
         matrix_t * b = (matrix_t *) matrix_create(nrows, ncols);
         matrix_randfill(b);
         start_time = wtime();
         matrix_multiply_threaded(a, b, nthreads);
     }
 
-    if (strcmp(oper, "sort")) {
+    if (strcmp(oper, "sort") == 0) {
         start_time = wtime();
         matrix_sort_threaded(a, nthreads);
     }
