@@ -37,7 +37,6 @@ int main(int argc, char **argv)
     matrix_t * a = (matrix_t *) matrix_create(nrows, ncols);
     matrix_randfill(a);
 
-
     if (strcmp(oper, "sum")) {
         matrix_t * b = (matrix_t *) matrix_create(nrows, ncols);
         matrix_randfill(b);
@@ -60,7 +59,8 @@ int main(int argc, char **argv)
 
     end_time = wtime();
 
-    printf("%d %d %f\n", nrows, ncols, end_time - start_time);
+    // printf("%d %d %f\n", nrows, ncols, end_time - start_time);
+    printf("%f\n", end_time - start_time);
     fflush(stdout);
 
     return EXIT_SUCCESS;
