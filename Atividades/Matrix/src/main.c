@@ -28,6 +28,7 @@ int main(int argc, char **argv)
     nrows = atoi(argv[2]);
     ncols = atoi(argv[3]);
     nthreads = atoi(argv[4]);
+    // fprintf(stderr, "%d threads\n", nthreads);
     if (nthreads < 1) {
         printf("Número inválido de threads.\n");
         exit(EXIT_FAILURE);

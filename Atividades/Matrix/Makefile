@@ -1,7 +1,7 @@
 # GNU Makefile
 
 CC = gcc
-LDFLAGS = -Wall -pthread -lm
+LDFLAGS = -Wall -pthread -lm -ofast
 DEBFLAGS = -g -pg
 TARGET = main
 FILES = src/matrix.c src/utils.c src/main.c

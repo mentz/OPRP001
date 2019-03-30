@@ -24,21 +24,16 @@ void *partition_worker(void *task) // (double *vec, int mythreads, int start, in
     pthread_t threads[2];
     partition_task_t tasks[2];
     int middle = (mytask->start + mytask->end) / 2;
-    mytask->mythreads--;
 
     if (mytask->end - mytask->start > 1) {
-        if (mytask->mythreads > 0) {
+        if (mytask->mythreads > 1) {
             tasks[0].vec = mytask->vec;
             tasks[0].number = mytask->number * 2 + 1;
             tasks[0].mythreads = mytask->mythreads/2;
             tasks[0].start = mytask->start;
             tasks[0].end = middle;
             pthread_create(&threads[0], NULL, partition_worker, &tasks[0]);
-        }
-        else
-            partition(mytask->vec, mytask->start, middle);
 
-        if (mytask->mythreads > 1) {
             tasks[1].vec = mytask->vec;
             tasks[1].number = mytask->number * 2 + 2;
             tasks[1].mythreads = (mytask->mythreads/2) + (mytask->mythreads%2);
@@ -47,14 +42,16 @@ void *partition_worker(void *task) // (double *vec, int mythreads, int start, in
             pthread_create(&threads[1], NULL, partition_worker, &tasks[1]);
         }
         else
+        {
+			// fprintf(stderr, "OI3 %d %d\n", mytask->start, mytask->end);
+            partition(mytask->vec, mytask->start, middle);
             partition(mytask->vec, middle, mytask->end);
+        }
     }
 
-    // join as duas (ou uma) filhas
-    if (mytask->mythreads) {
-        pthread_join(threads[0], NULL);
-    }
+    // join nos filhos
     if (mytask->mythreads > 1) {
+        pthread_join(threads[0], NULL);
         pthread_join(threads[1], NULL);
     }
 
@@ -105,6 +102,9 @@ void merge(double *vec, int start, int middle, int end)
     while (r < rr) {
         vec[k++] = rv[r++];
     }
+
+    free(lv);
+    free(rv);
 }
 
 void bubble_sort(double * vec, size_t arr_size) {

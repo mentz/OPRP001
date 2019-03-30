@@ -73,6 +73,8 @@ void *matrix_multiply_worker(void *args)
 
     int i, j, k;
 
+	// fprintf(stderr, "OI %d %d\n", margs->i0, margs->i1);
+
     for(i = margs->i0; i < margs->i1; i++) {
         for(j = 0; j < margs->A->cols; j++) {
             double sum = 0;
@@ -126,6 +128,9 @@ matrix_t *matrix_multiply_threaded(matrix_t *A, matrix_t *B, int num_threads)
         pthread_join(threads[i], NULL);
     }
 
+	free(args);
+	free(threads);
+
     return ret;
 }
 
@@ -159,12 +164,14 @@ matrix_t *matrix_multiply(matrix_t *A, matrix_t *B)
 void *matrix_sum_worker(void *args) {
     matrix_sum_args_t *margs = (matrix_sum_args_t *) args;
     int i;
+	
+	// fprintf(stderr, "OI2 %d\n", margs->len);
 
-    for (i = 0; i <  margs->len; i++) {
+    for (i = 0; i < margs->len; i++) {
         margs->C[i] = margs->A[i] + margs->B[i];
     }
 
-return NULL;
+	return NULL;
 }
 
 matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, int num_threads) {
@@ -195,7 +202,7 @@ matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, int num_threads) {
 
         args[i].len = partition_size;
     }
-    args[num_threads - 1].len += (newRows * newCols) % partition_size;
+    args[num_threads - 1].len += (newRows * newCols) % num_threads;
 
     for (i = 0; i < num_threads; i++) {
         pthread_create(&threads[i], NULL, matrix_sum_worker, (void *) &args[i]);
@@ -204,6 +211,9 @@ matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, int num_threads) {
     for (i = 0; i < num_threads; i++) {
         pthread_join(threads[i], NULL);
     }
+
+	free(args);
+	free(threads);
 
     return ret;
 }
@@ -239,7 +249,6 @@ matrix_t *matrix_sort_threaded(matrix_t *A, int num_threads)
     memcpy(ret->data, A->data, sizeof(double *) * A->rows);
     memcpy(ret->data[0], A->data[0], sizeof(double) * A->rows * A->cols);
 
-    // bubble_sort(ret->data[0], A->rows * A->cols);
     merge_sort_threaded(ret->data[0], A->rows * A->cols, num_threads);
 
     return ret;
