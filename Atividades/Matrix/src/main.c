@@ -16,6 +16,8 @@ int main(int argc, char **argv)
 {
     char oper[256];
     double start_time, end_time;
+    // Inicializar para perder o warning (-Wmaybe-uninitialized)
+    start_time = wtime();
     int nrows, ncols, nthreads;
 
     if ((argc != 5)) {
