@@ -44,19 +44,22 @@ int main(int argc, char **argv)
         matrix_t * b = (matrix_t *) matrix_create(nrows, ncols);
         matrix_randfill(b);
         start_time = wtime();
-        matrix_sum_threaded(a, b, nthreads);
+        if (nthreads > 1) matrix_sum_threaded(a, b, nthreads);
+        else              matrix_sum(a, b);
     }
 
     if (strcmp(oper, "mult") == 0) {
         matrix_t * b = (matrix_t *) matrix_create(nrows, ncols);
         matrix_randfill(b);
         start_time = wtime();
-        matrix_multiply_threaded(a, b, nthreads);
+        if (nthreads > 1) matrix_multiply_threaded(a, b, nthreads);
+        else              matrix_multiply(a, b);
     }
 
     if (strcmp(oper, "sort") == 0) {
         start_time = wtime();
-        matrix_sort_threaded(a, nthreads);
+        if (nthreads > 1) matrix_sort_threaded(a, nthreads);
+        else              matrix_sort(a);
     }
     // END Do something
 
