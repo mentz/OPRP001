@@ -63,28 +63,28 @@ void matrix_fill(matrix_t *m, double val) {
   }
 }
 
-void *matrix_multiply_worker(void *args) {
-  matrix_mult_args_t *margs = (matrix_mult_args_t *)args;
-
-  int i, j, k;
-
-  // fprintf(stderr, "OI %d %d\n", margs->i0, margs->i1);
-
-  for (i = margs->i0; i < margs->i1; i++) {
-    for (j = 0; j < margs->A->cols; j++) {
-      double sum = 0;
-      for (k = 0; k < margs->A->rows; k++) {
-        sum += margs->A->data[i][k] * margs->B->data[k][j];
-      }
-      margs->C->data[i][j] = sum;
-    }
-  }
-
-  return NULL;
-}
-
 matrix_t *matrix_multiply_threaded(matrix_t *A, matrix_t *B, matrix_t *ret,
                                    int num_threads) {
+  // Checar se a multiplicação é possível
+  if (A->cols != B->rows) {
+    printf("Matrizes de formato incompativel\n");
+    return NULL;
+  }
+
+  int i, j, k;
+  int newRows = A->rows;
+  int newCols = B->cols;
+
+  for (i = 0; i < newRows; i++) {
+    for (j = 0; j < newCols; j++) {
+      double sum = 0;
+#pragma omp parallel for reduction(+ : sum)
+      for (k = 0; k < A->rows; k++) {
+        sum += A->data[i][k] * B->data[k][j];
+      }
+      ret->data[i][j] = sum;
+    }
+  }
 
   return ret;
 }
@@ -115,7 +115,20 @@ matrix_t *matrix_multiply(matrix_t *A, matrix_t *B, matrix_t *ret) {
 
 matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, matrix_t *ret,
                               int num_threads) {
-  printf("IMPLEMENTAR\n");
+  // Checar se a soma é possível
+  if (A->rows != B->rows || A->cols != B->cols) {
+    printf("Matrizes de formato incompativel\n");
+    return NULL;
+  }
+
+  int i;
+  int newRows = A->rows;
+  int newCols = A->cols;
+
+#pragma omp parallel for schedule(static)
+  for (i = 0; i < newCols * newRows; i++) {
+    ret->data[0][i] = A->data[0][i] + B->data[0][i];
+  }
 
   return ret;
 }
@@ -127,29 +140,24 @@ matrix_t *matrix_sum(matrix_t *A, matrix_t *B, matrix_t *ret) {
     return NULL;
   }
 
-  int i, j;
+  int i;
   int newRows = A->rows;
   int newCols = A->cols;
 
-  for (i = 0; i < newCols; i++) {
-    for (j = 0; j < newRows; j++) {
-      ret->data[i][j] = A->data[i][j] + B->data[i][j];
-    }
+  for (i = 0; i < newCols * newRows; i++) {
+    ret->data[0][i] = A->data[0][i] + B->data[0][i];
   }
 
   return ret;
 }
 
 matrix_t *matrix_sort_threaded(matrix_t *A, matrix_t *ret, int num_threads) {
-  printf("IMPLEMENTAR\n");
+  merge_sort_threaded(ret->data[0], A->rows * A->cols, num_threads);
 
   return ret;
 }
 
 matrix_t *matrix_sort(matrix_t *A, matrix_t *ret) {
-  memcpy(ret->data, A->data, sizeof(double *) * A->rows);
-  memcpy(ret->data[0], A->data[0], sizeof(double) * A->rows * A->cols);
-
   merge_sort(ret->data[0], A->rows * A->cols);
 
   return ret;

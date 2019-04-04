@@ -1,6 +1,7 @@
 #ifndef __MATRIX_H
 #define __MATRIX_H
 
+#include <omp.h>
 #include <stdlib.h>
 
 #define random() ((rand() ^ rand()) / (RAND_MAX + 1.0))

@@ -18,12 +18,9 @@ void merge_sort_threaded(double *vec, size_t arr_size, int num_threads) {
   partition_worker((void *)&task);
 }
 
-void *
-partition_worker(void *task) // (double *vec, int mythreads, int start, int end)
-{
+void *partition_worker(void *task) {
   partition_task_t *mytask = (partition_task_t *)task;
 
-  pthread_t threads[2];
   partition_task_t tasks[2];
   int middle = (mytask->start + mytask->end) / 2;
 
@@ -34,25 +31,25 @@ partition_worker(void *task) // (double *vec, int mythreads, int start, int end)
       tasks[0].mythreads = mytask->mythreads / 2;
       tasks[0].start = mytask->start;
       tasks[0].end = middle;
-      pthread_create(&threads[0], NULL, partition_worker, &tasks[0]);
 
       tasks[1].vec = mytask->vec;
       tasks[1].number = mytask->number * 2 + 2;
       tasks[1].mythreads = (mytask->mythreads / 2) + (mytask->mythreads % 2);
       tasks[1].start = middle;
       tasks[1].end = mytask->end;
-      pthread_create(&threads[1], NULL, partition_worker, &tasks[1]);
+      omp_set_num_threads(num_threads);
+#pragma omp parallel sections
+      {
+#pragma omp section
+        { partition_worker(&tasks[0]); }
+#pragma omp section
+        { partition_worker(&tasks[1]); }
+      }
     } else {
       // fprintf(stderr, "OI3 %d %d\n", mytask->start, mytask->end);
       partition(mytask->vec, mytask->start, middle);
       partition(mytask->vec, middle, mytask->end);
     }
-  }
-
-  // join nos filhos
-  if (mytask->mythreads > 1) {
-    pthread_join(threads[0], NULL);
-    pthread_join(threads[1], NULL);
   }
 
   merge(mytask->vec, mytask->start, middle, mytask->end);

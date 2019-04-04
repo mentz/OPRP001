@@ -62,6 +62,8 @@ int main(int argc, char **argv) {
 
   if (strcmp(oper, "sort") == 0) {
     matrix_t *ret = (matrix_t *)matrix_create(nrows, ncols);
+    memcpy(ret->data, a->data, sizeof(double *) * a->rows);
+    memcpy(ret->data[0], a->data[0], sizeof(double) * a->rows * a->cols);
     start_time = wtime();
     if (nthreads > 1)
       matrix_sort_threaded(a, ret, nthreads);
