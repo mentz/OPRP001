@@ -9,13 +9,37 @@ void swap(double *a, double *b) {
 }
 
 void merge_sort_threaded(double *vec, size_t arr_size, int num_threads) {
-  partition_task_t task;
-  task.vec = vec;
-  task.number = 0;
-  task.mythreads = num_threads;
-  task.start = 0;
-  task.end = arr_size;
-  partition_worker((void *)&task);
+  // partition_task_t task;
+  // task.vec = vec;
+  // task.number = 0;
+  // task.mythreads = num_threads;
+  // task.start = 0;
+  // task.end = arr_size;
+  // partition_worker((void *)&task);
+  partition_threaded(vec, num_threads, 0, arr_size);
+}
+
+void partition_threaded(double *vec, int threads, int start, int end) {
+  int middle = (start + end) / 2;
+
+  if (end - start > 1) {
+    if (threads > 1) {
+      omp_set_nested(1);
+#pragma omp parallel sections
+      {
+        omp_set_num_threads(2);
+#pragma omp section
+        partition_threaded(vec, threads / 2, start, middle);
+#pragma omp section
+        partition_threaded(vec, threads - (threads / 2), middle, end);
+      }
+    } else {
+      partition(vec, start, middle);
+      partition(vec, middle, end);
+    }
+  }
+
+  merge(vec, start, middle, end);
 }
 
 void *partition_worker(void *task) {
@@ -37,7 +61,6 @@ void *partition_worker(void *task) {
       tasks[1].mythreads = (mytask->mythreads / 2) + (mytask->mythreads % 2);
       tasks[1].start = middle;
       tasks[1].end = mytask->end;
-      omp_set_num_threads(num_threads);
 #pragma omp parallel sections
       {
 #pragma omp section
