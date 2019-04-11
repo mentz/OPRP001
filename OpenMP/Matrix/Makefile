@@ -1,10 +1,10 @@
 # GNU Makefile
 
-CC = g++
-LDFLAGS = -Wall -pthread -lm -fopenmp -std=c++11
+CC = gcc
+LDFLAGS = -Wall -pthread -lm -fopenmp
 DEBFLAGS = -g -pg
 TARGET = main
-FILES = src/matrix.cpp src/utils.cpp src/main.cpp
+FILES = src/matrix.c src/utils.c src/main.c
 
 all: $(FILES)
 	$(CC) -o $(TARGET) $(FILES) $(LDFLAGS)

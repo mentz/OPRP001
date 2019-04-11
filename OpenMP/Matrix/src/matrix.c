@@ -75,10 +75,11 @@ matrix_t *matrix_multiply_threaded(matrix_t *A, matrix_t *B, matrix_t *ret,
   int newRows = A->rows;
   int newCols = B->cols;
 
+  omp_set_num_threads(num_threads);
+#pragma omp parallel for private(j, k) schedule(static)
   for (i = 0; i < newRows; i++) {
     for (j = 0; j < newCols; j++) {
       double sum = 0;
-#pragma omp parallel for reduction(+ : sum)
       for (k = 0; k < A->rows; k++) {
         sum += A->data[i][k] * B->data[k][j];
       }
@@ -125,7 +126,8 @@ matrix_t *matrix_sum_threaded(matrix_t *A, matrix_t *B, matrix_t *ret,
   int newRows = A->rows;
   int newCols = A->cols;
 
-#pragma omp parallel for schedule(static)
+  omp_set_num_threads(num_threads);
+#pragma omp parallel for
   for (i = 0; i < newCols * newRows; i++) {
     ret->data[0][i] = A->data[0][i] + B->data[0][i];
   }
