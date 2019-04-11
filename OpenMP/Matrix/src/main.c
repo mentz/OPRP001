@@ -36,11 +36,11 @@ int main(int argc, char **argv) {
 
   // Do something
   matrix_t *a = (matrix_t *)matrix_create(nrows, ncols);
+  matrix_t *ret = (matrix_t *)matrix_create(nrows, ncols);
   matrix_randfill(a);
 
   if (strcmp(oper, "sum") == 0) {
     matrix_t *b = (matrix_t *)matrix_create(nrows, ncols);
-    matrix_t *ret = (matrix_t *)matrix_create(nrows, ncols);
     matrix_randfill(b);
     start_time = wtime();
     if (nthreads > 1)
@@ -51,7 +51,6 @@ int main(int argc, char **argv) {
 
   if (strcmp(oper, "mult") == 0) {
     matrix_t *b = (matrix_t *)matrix_create(nrows, ncols);
-    matrix_t *ret = (matrix_t *)matrix_create(nrows, ncols);
     matrix_randfill(b);
     start_time = wtime();
     if (nthreads > 1)
@@ -61,7 +60,6 @@ int main(int argc, char **argv) {
   }
 
   if (strcmp(oper, "sort") == 0) {
-    matrix_t *ret = (matrix_t *)matrix_create(nrows, ncols);
     memcpy(ret->data, a->data, sizeof(double *) * a->rows);
     memcpy(ret->data[0], a->data[0], sizeof(double) * a->rows * a->cols);
     start_time = wtime();
@@ -73,6 +71,8 @@ int main(int argc, char **argv) {
   // END Do something
 
   end_time = wtime();
+
+  // matrix_print(ret);
 
   // printf("%d %d %f\n", nrows, ncols, end_time - start_time);
   printf("%f\n", end_time - start_time);
