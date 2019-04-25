@@ -1,6 +1,6 @@
 CXXFLAGS=-O3 -std=c++11 -Wall -fopenmp
 RM=rm -f
-EXEC=main
+EXEC=paralelo
 
 all: $(EXEC)
 
