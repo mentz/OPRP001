@@ -51,16 +51,16 @@ int main(int argc, char *argv[])
 	my_r = rank * qtde_por_thread;
 	my_maxr = min(max_row, (rank + 1) * qtde_por_thread);
 
-	for (int r = my_r; r < my_maxr; r++)
+	for (int r = 0; r < qtde_por_thread; r++)
 	{
 		for (int c = 0; c < max_column; c++)
 		{
-			printf("oi [%d] r%d c%d\n", rank, r, c);
+			printf("oi [%d] r%d c%d\n", rank, r + my_r, c);
 			fflush(stdout);
 			complex<float> z;
 			int n = 0;
 			while (abs(z) < 2 && ++n < max_n)
-				z = (z * z) + complex<float>((float)c * 2 / max_column - 1.5, (float)r * 2 / max_row - 1);
+				z = (z * z) + complex<float>((float)c * 2 / max_column - 1.5, (float)(r + my_r) * 2 / max_row - 1);
 			mat[r][c] = (n == max_n ? '#' : '.');
 		}
 	}
