@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 {
 	int rank, size;
 	// double start_time = wtime();
-	int max_row, max_column, max_n;
+	int max_row, max_column, max_n, qtde_por_thread;
 	int vec_rows, my_r, my_maxr;
 
 	MPI_Comm comm = MPI_COMM_WORLD;
@@ -33,34 +33,30 @@ int main(int argc, char *argv[])
 		cin >> max_row;
 		cin >> max_column;
 		cin >> max_n;
-		my_r = 0;
-		my_maxr = (max_row / size);
 	}
 	MPI_Bcast(&max_row, 1, MPI_INT, 0, comm);
 	MPI_Bcast(&max_column, 1, MPI_INT, 0, comm);
 	MPI_Bcast(&max_n, 1, MPI_INT, 0, comm);
+	qtde_por_thread = ceil((double)max_row / size);
 
-	printf("[%*d] - r%d c%d n%d\n", (int)ceil(log10(size)), rank, max_row, max_column, max_n);
+	printf("[%*d] - r%d c%d n%d q%d\n", (int)ceil(log10(size)), rank, max_row, max_column, max_n, qtde_por_thread);
 	// fiz :D
 
 	char **mat = new char *[max_row];
-	char *tmp = new char[max_row * max_column];
+	char *tmp = new char[max_row * max_column * 2];
 
-	for (int i = 0; i < max_row; i++)
+	for (int i = 0; i < max_row * 2; i++)
 		mat[i] = &tmp[i * max_column];
 
-	for (int i = 1; i < size; i++)
-	{
-		int seu_r = (max_row / size) * i;
-		int seu_maxr = (max_row / size) * (i + 1);
-		MPI_Send(&seu_r, 1, MPI_INT, i, 0, comm);
-		MPI_Send(&seu_maxr, 1, MPI_INT, i, 0, comm);
-	}
+	my_r = rank * qtde_por_thread;
+	my_maxr = min(max_row, (rank + 1) * qtde_por_thread);
 
 	for (int r = my_r; r < my_maxr; r++)
 	{
-		for (int c = 0; c < max_row; c++)
+		for (int c = 0; c < max_column; c++)
 		{
+			printf("oi [%d] r%d c%d\n", rank, r, c);
+			fflush(stdout);
 			complex<float> z;
 			int n = 0;
 			while (abs(z) < 2 && ++n < max_n)
@@ -69,15 +65,32 @@ int main(int argc, char *argv[])
 		}
 	}
 	// double finish_time = wtime();
+	printf("tchau [%d]\n", rank);
+	fflush(stdout);
 
-	for (int r = 0; r < max_row; ++r)
+	MPI_Gather(mat[0], qtde_por_thread * max_column, MPI_CHAR, mat[0], qtde_por_thread * max_column, MPI_CHAR, 0, comm);
+	printf("tchau2 [%d]\n", rank);
+	fflush(stdout);
+
+	if (rank == 0)
 	{
-		for (int c = 0; c < max_column; ++c)
-			printf("%c", mat[r][c]);
-		printf("\n");
+		printf("tchau3 [%d]\n", rank);
+		fflush(stdout);
+		for (int r = 0; r < max_row; ++r)
+		{
+			for (int c = 0; c < max_column; ++c)
+				printf("%c", mat[r][c]);
+			printf("\n");
+		}
+		// printf("%f\n", finish_time - start_time);
+		printf("tchau4 [%d]\n", rank);
+		fflush(stdout);
 	}
-	// printf("%f\n", finish_time - start_time);
 
+	printf("tchau5 [%d]\n", rank);
+	fflush(stdout);
 	MPI_Finalize();
+	printf("tchau6 [%d]\n", rank);
+	fflush(stdout);
 	return 0;
 }
