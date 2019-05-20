@@ -38,6 +38,8 @@ matrix_t *matrix_sum(matrix_t *A, matrix_t *B, matrix_t *ret);
 matrix_t *matrix_sort(matrix_t *A, matrix_t *ret);
 void matrix_print(matrix_t *m);
 
+// Métodos com uso de GPU
+matrix_t *matrix_multiply_gpu(matrix_t *A, matrix_t *B, matrix_t *ret);
 matrix_t *matrix_sum_gpu(matrix_t *A, matrix_t *B, matrix_t *ret);
 
 #endif

@@ -1,6 +1,9 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
+#define CUDA_T 1024
+#define CUDA_T2 32
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

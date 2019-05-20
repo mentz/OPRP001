@@ -1,10 +1,10 @@
 # GNU Makefile
 
-CC = gcc
-LDFLAGS = -Wall -pthread -lm -fopenmp
+CC = nvcc
+LDFLAGS = -lm
 DEBFLAGS = -g -pg
 TARGET = main
-FILES = src/matrix.c src/utils.c src/main.c
+FILES = src/matrix.cu src/utils.cu src/main.cu
 
 all: $(FILES)
 	$(CC) -o $(TARGET) $(FILES) $(LDFLAGS)
