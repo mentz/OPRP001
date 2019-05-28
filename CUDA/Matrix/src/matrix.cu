@@ -136,6 +136,19 @@ __global__ void matrix_multiply_kernel(double *a, double *b, double *ret,
   }
 }
 
+__global__ void matrix_multiply_kernel_shared(double *a, double *b, double *ret,
+                                       int ladoMatriz) {
+  int y = blockIdx.y * blockDim.y + threadIdx.y;
+  int x = blockIdx.x * blockDim.x + threadIdx.x;
+  if (y < ladoMatriz && x < ladoMatriz) {
+    double soma = 0.0;
+    for (int i = 0; i < ladoMatriz; i++) {
+      soma += a[y * ladoMatriz + i] * b[i * ladoMatriz + x];
+    }
+    ret[y * ladoMatriz + x] = soma;
+  }
+}
+
 matrix_t *matrix_multiply_gpu(matrix_t *A, matrix_t *B, matrix_t *ret) {
   // Checar se a multiplicação é possível
   // if (A->cols != B->rows) {
@@ -158,8 +171,7 @@ matrix_t *matrix_multiply_gpu(matrix_t *A, matrix_t *B, matrix_t *ret) {
   cudaMemcpy(d_b, B->data[0], alloc_mat_size, cudaMemcpyHostToDevice);
 
   dim3 bloco(CUDA_T2, CUDA_T2);
-  dim3 grade((int)ceil((double)width / CUDA_T2),
-             (int)ceil((double)width / CUDA_T2));
+  dim3 grade((width - 1 + CUDA_T2) / CUDA_T2, (width - 1 + CUDA_T2) / CUDA_T2);
 
   matrix_multiply_kernel<<<grade, bloco>>>(d_a, d_b, d_ret, newRows);
 
