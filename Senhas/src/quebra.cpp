@@ -1,7 +1,6 @@
 #include <crypt.h>
 #include <iostream>
 #include <omp.h>
-#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,8 +12,9 @@ using namespace std;
 class Senha {
 private:
   int maxSize;
-  string alfa;
-  vector<unsigned int> vetor;
+  char alfa[128];
+  char senha[32];
+  unsigned char vetor[8];
 
   void avancarN(int n) {
     int overflow, pos = 0;
@@ -30,21 +30,25 @@ private:
 public:
   Senha(int comeco) {
     maxSize = 66;
-    alfa = "# ./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    vetor = vector<unsigned int>(8, 0);
+    strncpy(alfa, "# ./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", sizeof(char) * (maxSize + 2));
+    vetor[0] = 0;
+    vetor[1] = 0;
+    vetor[2] = 0;
+    vetor[3] = 0;
+    vetor[4] = 0;
+    vetor[5] = 0;
+    vetor[6] = 0;
+    vetor[7] = 0;
     avancarN(comeco);
   }
 
-  string getSenha() {
-    ostringstream oss;
-    for (int i = 0; i < (int)vetor.size(); i++) {
-      if (vetor[i] == 0) {
-        oss << '\0';
-        break;
-      }
-      oss << alfa[vetor[i]];
+  char *getSenha() {
+    int i = 0;
+    for (; i < 8 && vetor[i]; i++) {
+      senha[i] = alfa[vetor[i]];
     }
-    return oss.str();
+    senha[i] = '\0';
+    return senha;
   }
 
   void prox() { avancarN(1); }
@@ -62,17 +66,17 @@ int main(int argc, char *argv[]) {
 
   char *result = new char[32];
   Senha senha(1);
-  unsigned long long maximo = 66L * 66L * 66L * 66L * 66L * 66L * 66L * 66L;
+  unsigned long long maximo = 66L * 66L * 66L; // * 66L * 66L * 66L * 66L * 66L;
   unsigned long long i = 0L;
   for (; i < maximo; i++) {
     // printf("Senha %6d: %s\n", i, senha.getSenha().data());
     for (int j = 0; j < (int)cifras.size(); j++) {
-      result = crypt(senha.getSenha().data(), cifras[j].data());
+      result = crypt(senha.getSenha(), cifras[j].data());
       int ok = strncmp(result, cifras[j].data(), 14) == 0;
 
       if (ok) {
         printf("(%d) %s == %s\n", 400 - (int)cifras.size(), cifras[j].data(),
-               senha.getSenha().data());
+               senha.getSenha());
         cifras.erase(cifras.begin() + j);
         j--;
         break;
