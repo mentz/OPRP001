@@ -1,5 +1,6 @@
 #include <crypt.h>
 #include <iostream>
+#include <map>
 #include <math.h>
 #include <omp.h>
 #include <set>
@@ -93,6 +94,8 @@ int main(int argc, char *argv[]) {
     cifras.insert(cifra);
   }
 
+  map<string, string> quebradas;
+
   unsigned long long i = 0L;
 #pragma omp parallel
   {
@@ -106,13 +109,13 @@ int main(int argc, char *argv[]) {
     Senha senha(eu + 1);
     unsigned long long thread_i = eu;
     for (; thread_i < maximo; thread_i += passo) {
-      // if ((thread_i % ((rand() % 500) + 500)) == 0) {
+      if ((rand() % 100) < 2) {
 #pragma omp critical
-      {
-        if (cifras.size() < myCifras.size())
-          myCifras = cifras;
+        {
+          if (cifras.size() < myCifras.size())
+            myCifras = cifras;
+        }
       }
-      // }
       for (auto &e : myCifras) {
         result = crypt_r(senha.getSenha(), e.data(), &myData);
         int ok = strncmp(result, e.data(), 14) == 0;
@@ -122,6 +125,8 @@ int main(int argc, char *argv[]) {
           //        e.data(), senha.getSenha());
           printf("t[%*d, %llu] %s = %s\n", (int)ceil(log10(passo)), eu,
                  thread_i, e.data(), senha.getSenha());
+          fflush(stdout);
+          quebradas[e.data()] = senha.getSenha();
 #pragma omp critical
           {
             if (cifras.count(e) > 0)
@@ -134,8 +139,9 @@ int main(int argc, char *argv[]) {
         break;
       senha.prox(passo);
 
-      if ((thread_i % 100000) == 0)
-        printf("%llu\n", thread_i);
+      if (((thread_i + 1) % 100000) == 0) {
+        fprintf(stderr, "%llu\n", thread_i + 1);
+      }
     }
 #pragma omp critical
     { i = std::max(i, thread_i); }
