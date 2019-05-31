@@ -12,10 +12,12 @@
 
 using namespace std;
 
-static int maxSize = 66;
-static const char alfa[67] =
+static int maxSize = 65;
+static const char alfa[66] =
     // "# ./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    " ./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    // " ./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    // Acontece que não tem espaços mesmo, afinal.
+    "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 class Senha {
 private:
@@ -59,7 +61,7 @@ public:
 
   char *getSenha() {
     int i = 0;
-    for (; i < 8 && vetor[i]; i++) {
+    for (; i < 8 && vetor[i] > -1; i++) {
       senha[i] = alfa[vetor[i]];
     }
     senha[i] = '\0';
@@ -79,7 +81,7 @@ int main(int argc, char *argv[]) {
     sscanf(argv[1], "%d", &comprimento);
     comprimento = std::min(8, comprimento);
     for (int i = 0; i < comprimento; i++) {
-      maximo *= 66L;
+      maximo *= (unsigned long long)maxSize;
     }
   } else {
     printf("Falta argumento: ./%s <comprimento_maximo>\n", argv[0]);
