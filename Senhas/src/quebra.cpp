@@ -1,6 +1,8 @@
 #include <crypt.h>
 #include <iostream>
+#include <math.h>
 #include <omp.h>
+#include <set>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,37 +11,49 @@
 
 using namespace std;
 
+static int maxSize = 66;
+static const char alfa[67] =
+    // "# ./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    " ./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
 class Senha {
 private:
-  int maxSize;
-  char alfa[128];
   char senha[32];
-  unsigned char vetor[8];
+  int vetor[8];
 
   void avancarN(int n) {
     int overflow, pos = 0;
     vetor[pos] += n;
     while ((overflow = (vetor[pos] / maxSize)) > 0 && pos < 8) {
       vetor[pos] %= maxSize;
-      if (vetor[pos] == 0)
-        vetor[pos] += 1;
+      // if (vetor[pos] == 0)
+      //   vetor[pos] += 1;
       vetor[++pos] += overflow;
     }
   }
 
 public:
   Senha(int comeco) {
-    maxSize = 66;
-    strncpy(alfa, "# ./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", sizeof(char) * (maxSize + 2));
-    vetor[0] = 0;
-    vetor[1] = 0;
-    vetor[2] = 0;
-    vetor[3] = 0;
-    vetor[4] = 0;
-    vetor[5] = 0;
-    vetor[6] = 0;
-    vetor[7] = 0;
+    vetor[0] = -1;
+    vetor[1] = -1;
+    vetor[2] = -1;
+    vetor[3] = -1;
+    vetor[4] = -1;
+    vetor[5] = -1;
+    vetor[6] = -1;
+    vetor[7] = -1;
     avancarN(comeco);
+  }
+
+  Senha() {
+    vetor[0] = -1;
+    vetor[1] = -1;
+    vetor[2] = -1;
+    vetor[3] = -1;
+    vetor[4] = -1;
+    vetor[5] = -1;
+    vetor[6] = -1;
+    vetor[7] = -1;
   }
 
   char *getSenha() {
@@ -53,40 +67,78 @@ public:
 
   void prox() { avancarN(1); }
 
-  void prox(int n) { this->avancarN(n); }
+  void prox(int n) { avancarN(n); }
 };
 
 int main(int argc, char *argv[]) {
-  // Ler senhas
-  char cifra[32] = "Ha0Vy6cN2SuiM";
-  vector<string> cifras(400);
-  for (int i = 0; i < 400; i++) {
-    getline(cin, cifras[i]);
+  // Obter comprimento máximo
+  int comprimento = 0;
+  unsigned long long maximo = 1L;
+  if (argc == 2) {
+    sscanf(argv[1], "%d", &comprimento);
+    comprimento = std::min(8, comprimento);
+    for (int i = 0; i < comprimento; i++) {
+      maximo *= 66L;
+    }
+  } else {
+    printf("Falta argumento: ./%s <comprimento_maximo>\n", argv[0]);
+    exit(1);
   }
 
-  char *result = new char[32];
-  Senha senha(1);
-  unsigned long long maximo = 66L * 66L * 66L; // * 66L * 66L * 66L * 66L * 66L;
-  unsigned long long i = 0L;
-  for (; i < maximo; i++) {
-    // printf("Senha %6d: %s\n", i, senha.getSenha().data());
-    for (int j = 0; j < (int)cifras.size(); j++) {
-      result = crypt(senha.getSenha(), cifras[j].data());
-      int ok = strncmp(result, cifras[j].data(), 14) == 0;
+  // Ler senhas
+  set<string> cifras;
+  string cifra;
+  for (int i = 0; i < 400; i++) {
+    getline(cin, cifra);
+    cifras.insert(cifra);
+  }
 
-      if (ok) {
-        printf("(%d) %s == %s\n", 400 - (int)cifras.size(), cifras[j].data(),
-               senha.getSenha());
-        cifras.erase(cifras.begin() + j);
-        j--;
-        break;
+  unsigned long long i = 0L;
+#pragma omp parallel
+  {
+    crypt_data myData;
+    set<string> myCifras = cifras;
+    char *result = myData.crypt_3_buf;
+    int eu = omp_get_thread_num();
+    int passo = omp_get_num_threads();
+    // printf("[%d] inicio %d, passo %d, myData %p\n", eu - 1, eu, passo,
+    // &myData);
+    Senha senha(eu + 1);
+    unsigned long long thread_i = eu;
+    for (; thread_i < maximo; thread_i += passo) {
+      // if ((thread_i % ((rand() % 500) + 500)) == 0) {
+#pragma omp critical
+      {
+        if (cifras.size() < myCifras.size())
+          myCifras = cifras;
       }
+      // }
+      for (auto &e : myCifras) {
+        result = crypt_r(senha.getSenha(), e.data(), &myData);
+        int ok = strncmp(result, e.data(), 14) == 0;
+
+        if (ok) {
+          // printf("(%d) %s == %s\n", 400 - (int)myCifras.size(),
+          //        e.data(), senha.getSenha());
+          printf("t[%*d, %llu] %s = %s\n", (int)ceil(log10(passo)), eu,
+                 thread_i, e.data(), senha.getSenha());
+#pragma omp critical
+          {
+            if (cifras.count(e) > 0)
+              cifras.erase(e);
+          }
+          // break;
+        }
+      }
+      if ((int)cifras.size() == 0)
+        break;
+      senha.prox(passo);
+
+      if ((thread_i % 100000) == 0)
+        printf("%llu\n", thread_i);
     }
-    if ((int)cifras.size() == 0)
-      break;
-    senha.prox();
-    if ((i % 100000) == 0)
-      printf("%llu\n", i);
+#pragma omp critical
+    { i = std::max(i, thread_i); }
   }
   printf("Quebrou em %llu iterações!!!!\n", i);
 

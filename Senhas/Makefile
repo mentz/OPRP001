@@ -1,7 +1,7 @@
 # GNU Makefile
 
 CC = g++
-LDFLAGS = -lm -lcrypt -std=c++11
+LDFLAGS = -lm -lcrypt -fopenmp -std=c++11
 CFLAGS = -Ofast
 DEBFLAGS = -g -pg
 TARGET = main
