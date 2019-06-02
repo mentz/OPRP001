@@ -4,11 +4,15 @@ CC = g++
 LDFLAGS = -lm -lcrypt -fopenmp -std=c++11
 CFLAGS = -Ofast
 DEBFLAGS = -g -pg
-TARGET = main
-FILES = src/quebra.cpp
 
-all: $(FILES)
-	$(CC) -o $(TARGET) $(FILES) $(CFLAGS) $(LDFLAGS)
+quebra: src/quebra.cpp
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
+quebra_mpi: src/quebra_mpi.cpp
+	mpic++ -o $@ $^ $(LDFLAGS) $(DEBFLAGS)
+
+teste: src/teste_wordgen.cpp
+	$(CC) -o $@ $^ $(LDFLAGS) $(DEBFLAGS)
 
 debug: $(FILES)
 	$(CC) -o $(TARGET) $(FILES) $(LDFLAGS) $(DEBFLAGS)
@@ -18,4 +22,4 @@ debug: $(FILES)
 clean:
 	rm -f gmon.out main
 
-.PHONY: all debug clean
+.PHONY: openmp mpi debug clean

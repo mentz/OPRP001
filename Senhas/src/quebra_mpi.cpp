@@ -3,8 +3,10 @@
 #include <iostream>
 #include <map>
 #include <math.h>
+#include <mpi.h>
 #include <omp.h>
 #include <set>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +39,7 @@ int main(int argc, char *argv[]) {
     cifras.insert(cifra);
   }
 
-  map<string, string> quebradas;
+  // map<string, string> quebradas;
 
   unsigned long long i = 0L;
 #pragma omp parallel
@@ -45,14 +47,17 @@ int main(int argc, char *argv[]) {
     crypt_data myData;
     set<string> myCifras = cifras;
     char *result = myData.crypt_3_buf;
-    int eu = omp_get_thread_num();
+    int inicio = omp_get_thread_num() + 1;
     int passo = omp_get_num_threads();
-    // printf("[%d] inicio %d, passo %d, myData %p\n", eu - 1, eu, passo,
-    // &myData);
-    Senha senha(eu + 1);
-    unsigned long long thread_i = eu;
-    for (; thread_i < maximo; thread_i += passo) {
-      if ((rand() % 100) < 1) {
+    // printf("[%d] inicio %d, passo %d, myData %p\n", inicio - 1, inicio,
+    // passo,
+    //        &myData);
+    Senha senha(inicio);
+    unsigned long long thread_i, counter = 0;
+    for (thread_i = inicio; thread_i < maximo; thread_i += passo) {
+
+      // Sincronizar entre as threads
+      if ((counter % 1000) == 0) {
 #pragma omp critical
         {
           if (cifras.size() < myCifras.size())
@@ -66,10 +71,12 @@ int main(int argc, char *argv[]) {
         if (ok) {
           // printf("(%d) %s == %s\n", 400 - (int)myCifras.size(),
           //        e.data(), senha.getSenha());
-          printf("t[%*d, %llu] %s = %s\n", (int)ceil(log10(passo)), eu,
-                 thread_i, e.data(), senha.getSenha());
+          printf("t[%*d, %2.f%%] %s = %s\n", (int)ceil(log10(passo)),
+                 inicio - 1, (thread_i / (double)maximo) * 100, e.data(),
+                 senha.getSenha());
           fflush(stdout);
-          quebradas[e.data()] = senha.getSenha();
+          // quebradas[e.data()] = senha.getSenha();
+
 #pragma omp critical
           {
             if (cifras.count(e) > 0)
@@ -83,8 +90,11 @@ int main(int argc, char *argv[]) {
       senha.prox(passo);
 
       if (((thread_i + 1) % 100000) == 0) {
-        fprintf(stderr, "%llu\n", thread_i + 1);
+        fprintf(stderr, "Realizado %2.f%% ou %llu de %llu\n",
+                (thread_i / (double)maximo) * 100, thread_i + 1, maximo);
       }
+
+      counter++;
     }
 #pragma omp critical
     { i = std::max(i, thread_i); }
