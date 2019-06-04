@@ -3,8 +3,10 @@
 #include <iostream>
 #include <map>
 #include <math.h>
+#include <mpi.h>
 #include <omp.h>
 #include <set>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +16,14 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
+  MPI_Init(&argc, &argv);
+
+  int mpi_rank;
+  int mpi_size;
+  MPI_Comm comm = MPI_COMM_WORLD;
+  MPI_Comm_rank(comm, &mpi_rank);
+  MPI_Comm_size(comm, &mpi_size);
+
   // Obter comprimento máximo
   int comprimento = 0;
   unsigned long long maximo = 64L;
@@ -25,57 +35,52 @@ int main(int argc, char *argv[]) {
       maximo *= (unsigned long long)maxSize;
     }
   } else {
-    printf("Falta argumento: ./%s <comprimento_maximo>\n", argv[0]);
+    fprintf(stderr, "Falta argumento: %s <comprimento_maximo>\n", argv[0]);
+    fprintf(stderr, "Uso: Informe pela entrada padrão o número de cifras e em seguida digite\n");
+    fprintf(stderr, "     as cifras uma por linha.\n");
     exit(1);
   }
 
   // Ler senhas
-  set<string> cifras;
+  int num_cifras = 0;
+  cin >> num_cifras;
+  getchar();
+  set<int> falta;
+  vector<string> cifras;
   string cifra;
-  for (int i = 0; i < 400; i++) {
+  for (int i = 0; i < num_cifras; i++) {
     getline(cin, cifra);
-    cifras.insert(cifra);
+    cifras.push_back(cifra);
+    falta.insert(i);
   }
-
-  map<string, string> quebradas;
 
   unsigned long long i = 0L;
 #pragma omp parallel
   {
     crypt_data myData;
-    set<string> myCifras = cifras;
     char *result = myData.crypt_3_buf;
-    int eu = omp_get_thread_num();
-    int passo = omp_get_num_threads();
-    // printf("[%d] inicio %d, passo %d, myData %p\n", eu - 1, eu, passo,
-    // &myData);
-    Senha senha(eu + 1);
-    unsigned long long thread_i = eu;
-    for (; thread_i < maximo; thread_i += passo) {
-      if ((rand() % 100) < 1) {
-#pragma omp critical
-        {
-          if (cifras.size() < myCifras.size())
-            myCifras = cifras;
+    int inicio = (mpi_rank * mpi_size) + omp_get_thread_num() + 1;
+    int passo = mpi_size * omp_get_num_threads();
+    Senha senha(inicio);
+    unsigned long long thread_i, counter = 0;
+    for (thread_i = inicio; thread_i < maximo; thread_i += passo) {
+      if ((thread_i % 10000) == 0) {
+        if ((int)falta.size() == 0) {
+          break;
         }
       }
-      for (auto &e : myCifras) {
-        result = crypt_r(senha.getSenha(), e.data(), &myData);
-        int ok = strncmp(result, e.data(), 14) == 0;
+      for (auto &e : falta) {
+        result = crypt_r(senha.getSenha(), cifras[e].data(), &myData);
+        int ok = strncmp(result, cifras[e].data(), 14) == 0;
 
         if (ok) {
-          // printf("(%d) %s == %s\n", 400 - (int)myCifras.size(),
-          //        e.data(), senha.getSenha());
-          printf("t[%*d, %llu] %s = %s\n", (int)ceil(log10(passo)), eu,
-                 thread_i, e.data(), senha.getSenha());
+          printf("t[%*d, %2.f%%] %s = %s\n", (int)ceil(log10(passo)),
+                 inicio - 1, (thread_i / (double)maximo) * 100, cifras[e].data(),
+                 senha.getSenha());
           fflush(stdout);
-          quebradas[e.data()] = senha.getSenha();
-#pragma omp critical
-          {
-            if (cifras.count(e) > 0)
-              cifras.erase(e);
-          }
-          // break;
+
+          if (falta.count(e) > 0)
+            falta.erase(e);
         }
       }
       if ((int)cifras.size() == 0)
@@ -83,13 +88,18 @@ int main(int argc, char *argv[]) {
       senha.prox(passo);
 
       if (((thread_i + 1) % 100000) == 0) {
-        fprintf(stderr, "%llu\n", thread_i + 1);
+        fprintf(stderr, "Realizado %2.f%% ou %llu de %llu\n",
+                (thread_i / (double)maximo) * 100, thread_i + 1, maximo);
       }
+
+      counter++;
     }
 #pragma omp critical
     { i = std::max(i, thread_i); }
   }
-  printf("Quebrou em %llu iterações!!!!\n", i);
+  fprintf(stderr, "Quebrou em %llu iterações!!!!\n", i);
+
+  MPI_Finalize();
 
   return 0;
 }
