@@ -16,6 +16,7 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
+  MPI_Init(&argc, &argv);
   // Obter comprimento máximo
   int comprimento = 0;
   unsigned long long maximo = 64L;
@@ -32,57 +33,37 @@ int main(int argc, char *argv[]) {
   }
 
   // Ler senhas
-  set<string> cifras;
+  set<int> falta;
+  vector<string> cifras;
   string cifra;
   for (int i = 0; i < 400; i++) {
     getline(cin, cifra);
-    cifras.insert(cifra);
+    cifras.push_back(cifra);
+    falta.insert(i);
   }
-
-  // map<string, string> quebradas;
 
   unsigned long long i = 0L;
 #pragma omp parallel
   {
     crypt_data myData;
-    set<string> myCifras = cifras;
     char *result = myData.crypt_3_buf;
     int inicio = omp_get_thread_num() + 1;
     int passo = omp_get_num_threads();
-    // printf("[%d] inicio %d, passo %d, myData %p\n", inicio - 1, inicio,
-    // passo,
-    //        &myData);
     Senha senha(inicio);
     unsigned long long thread_i, counter = 0;
     for (thread_i = inicio; thread_i < maximo; thread_i += passo) {
-
-      // Sincronizar entre as threads
-      if ((counter % 1000) == 0) {
-#pragma omp critical
-        {
-          if (cifras.size() < myCifras.size())
-            myCifras = cifras;
-        }
-      }
-      for (auto &e : myCifras) {
-        result = crypt_r(senha.getSenha(), e.data(), &myData);
-        int ok = strncmp(result, e.data(), 14) == 0;
+      for (auto &e : falta) {
+        result = crypt_r(senha.getSenha(), cifras[e].data(), &myData);
+        int ok = strncmp(result, cifras[e].data(), 14) == 0;
 
         if (ok) {
-          // printf("(%d) %s == %s\n", 400 - (int)myCifras.size(),
-          //        e.data(), senha.getSenha());
           printf("t[%*d, %2.f%%] %s = %s\n", (int)ceil(log10(passo)),
-                 inicio - 1, (thread_i / (double)maximo) * 100, e.data(),
+                 inicio - 1, (thread_i / (double)maximo) * 100, cifras[e].data(),
                  senha.getSenha());
           fflush(stdout);
-          // quebradas[e.data()] = senha.getSenha();
 
-#pragma omp critical
-          {
-            if (cifras.count(e) > 0)
-              cifras.erase(e);
-          }
-          // break;
+          if (falta.count(e) > 0)
+            falta.erase(e);
         }
       }
       if ((int)cifras.size() == 0)
@@ -99,7 +80,9 @@ int main(int argc, char *argv[]) {
 #pragma omp critical
     { i = std::max(i, thread_i); }
   }
-  printf("Quebrou em %llu iterações!!!!\n", i);
+  fprintf(stderr, "Quebrou em %llu iterações!!!!\n", i);
+
+  MPI_Finalize();
 
   return 0;
 }

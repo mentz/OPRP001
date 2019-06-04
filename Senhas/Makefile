@@ -5,11 +5,11 @@ LDFLAGS = -lm -lcrypt -fopenmp -std=c++11
 CFLAGS = -Ofast
 DEBFLAGS = -g -pg
 
-quebra: src/quebra.cpp
-	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+openmp: src/quebra.cpp
+	$(CC) -o quebra $^ $(CFLAGS) $(LDFLAGS)
 
-quebra_mpi: src/quebra_mpi.cpp
-	mpic++ -o $@ $^ $(LDFLAGS) $(DEBFLAGS)
+mpi: src/quebra_mpi.cpp
+	mpic++ -o quebra_mpi $^ $(LDFLAGS) $(DEBFLAGS)
 
 teste: src/teste_wordgen.cpp
 	$(CC) -o $@ $^ $(LDFLAGS) $(DEBFLAGS)
@@ -20,6 +20,6 @@ debug: $(FILES)
 # Dependencias
 
 clean:
-	rm -f gmon.out main
+	rm -f gmon.out main quebra quebra_mpi
 
 .PHONY: openmp mpi debug clean
