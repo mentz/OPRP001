@@ -6,7 +6,7 @@
 int main(int argc, char *argv[]) {
   // Obter comprimento máximo
   int comprimento = 0;
-  int noprint = 0;
+  int print = 0;
   ull maximo = 64L;
   if (argc == 3) {
     sscanf(argv[1], "%d", &comprimento);
@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
       maximo++;
       maximo *= (unsigned long long)maxSize;
     }
-    sscanf(argv[2], "%d", &noprint);
+    sscanf(argv[2], "%d", &print);
   } else {
-    printf("Falta argumento: ./%s <comprimento_maximo> <1|0>\n", argv[0]);
+    printf("Falta argumento: %s <comprimento_maximo:i> <imprimir:b>\n", argv[0]);
     return 1;
   }
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     int start = omp_get_thread_num();
     // Senha s(start + 1);
     int step = omp_get_num_threads();
-    if (noprint)
+    if (!print)
       for (ull i = start; i < maximo; i += step) {
         Senha(i).getSenha();
       }
