@@ -1,25 +1,22 @@
 # GNU Makefile
 
 CC = g++
-LDFLAGS = -lm -lcrypt -fopenmp -std=c++11
-CFLAGS = -Ofast
+FLAGS = -lm -lcrypt -fopenmp -std=c++11
+OPTIMIZATION = -Ofast
 DEBFLAGS = -g -pg
 
 quebra: src/quebra.cpp
-	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
-
-quebra_mpi: src/quebra_mpi.cpp
-	mpic++ -o $@ $^ $(LDFLAGS) $(DEBFLAGS)
+	mpic++ -o $@ $^ $(OPTIMIZATION) $(FLAGS)
 
 teste: src/teste_wordgen.cpp
-	$(CC) -o $@ $^ $(LDFLAGS) $(DEBFLAGS)
+	$(CC) -o $@ $^ $(OPTIMIZATION) $(FLAGS)
 
-debug: $(FILES)
-	$(CC) -o $(TARGET) $(FILES) $(LDFLAGS) $(DEBFLAGS)
+debug: src/quebra.cpp
+	$(CC) -o $@ $^ $(FLAGS) $(DEBFLAGS)
 
 # Dependencias
 
 clean:
-	rm -f gmon.out main
+	rm -f gmon.out main quebra
 
-.PHONY: openmp mpi debug clean
+.PHONY: quebra teste debug clean

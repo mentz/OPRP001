@@ -26,7 +26,7 @@ private:
 
 public:
   Senha(int comeco) {
-    vetor[0] = -1;
+    vetor[0] = 0;
     vetor[1] = -1;
     vetor[2] = -1;
     vetor[3] = -1;
@@ -38,7 +38,7 @@ public:
   }
 
   Senha() {
-    vetor[0] = -1;
+    vetor[0] = 0;
     vetor[1] = -1;
     vetor[2] = -1;
     vetor[3] = -1;
