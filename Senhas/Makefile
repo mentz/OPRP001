@@ -1,9 +1,9 @@
 # GNU Makefile
 
 CC = g++
-FLAGS = -lm -lcrypt -fopenmp -std=c++11
+FLAGS = -lm -lcrypt -fopenmp -pthread -std=c++11
 OPTIMIZATION = -Ofast
-DEBFLAGS = -g -pg
+DEBFLAGS = -g -pg -O0
 
 quebra: src/quebra.cpp
 	mpic++ -o $@ $^ $(OPTIMIZATION) $(FLAGS)
@@ -12,7 +12,7 @@ teste: src/teste_wordgen.cpp
 	$(CC) -o $@ $^ $(OPTIMIZATION) $(FLAGS)
 
 debug: src/quebra.cpp
-	$(CC) -o $@ $^ $(FLAGS) $(DEBFLAGS)
+	mpic++ -o $@ $^ $(FLAGS) $(DEBFLAGS)
 
 # Dependencias
 
