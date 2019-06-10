@@ -15,8 +15,10 @@
 #include <string>
 #include <vector>
 
+int stop = 0;
+
 void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm, int num_cifras,
-              std::set<int> *falta, int *stop) {
+              std::set<int> *falta) {
   // Seção de sincronização de progresso
   int *my_list = new int[num_cifras];
   int *other_list = new int[num_cifras];
@@ -67,7 +69,20 @@ void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm, int num_cifras,
   }
 }
 
+void force_stop(int signal) {
+  fprintf(stderr, "Encerramento forçado\n");
+  stop = 1;
+}
+
 int main(int argc, char *argv[]) {
+  signal(SIGABRT, force_stop);
+  signal(SIGFPE, force_stop);
+  signal(SIGILL, force_stop);
+  signal(SIGINT, force_stop);
+  signal(SIGSEGV, force_stop);
+  signal(SIGTERM, force_stop);
+  signal(SIGKILL, force_stop);
+
   int thread_level;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &thread_level);
 
@@ -100,6 +115,7 @@ int main(int argc, char *argv[]) {
   // Ler senhas e sincronizar com outros processos MPI
   int num_cifras = 0;
   std::set<int> falta;
+  std::vector<std::string> sais;
   char **cifras;
   char *cbloco;
   if (mpi_rank == 0) {
@@ -110,11 +126,13 @@ int main(int argc, char *argv[]) {
     cifras = new char *[num_cifras];
     cbloco = new char[num_cifras * 32];
     std::string cifra;
+    sais = std::vector<std::string>(num_cifras);
     for (int i = 0; i < num_cifras; i++) {
       getline(std::cin, cifra);
       cifras[i] = &cbloco[i * 32];
       strncpy(cifras[i], cifra.data(), 16);
       falta.insert(i);
+      sais[i] = cifra.substr(0, 2);
     }
     MPI_Bcast(cifras[0], num_cifras * 32, MPI_CHAR, 0, comm);
   } else {
@@ -122,22 +140,22 @@ int main(int argc, char *argv[]) {
     MPI_Bcast(&num_cifras, 1, MPI_INT, 0, comm);
     cifras = new char *[num_cifras];
     cbloco = new char[num_cifras * 32];
+    sais = std::vector<std::string>(num_cifras);
+    MPI_Bcast(cbloco, num_cifras * 32, MPI_CHAR, 0, comm);
     for (int i = 0; i < num_cifras; i++) {
       cifras[i] = &cbloco[i * 32];
+      std::string cifra(cifras[i], cifras[i + 16]);
       falta.insert(i);
+      sais[i] = cifra.substr(0, 2);
     }
-    MPI_Bcast(cifras[0], num_cifras * 32, MPI_CHAR, 0, comm);
   }
 
   // Iniciar thread de sincronização entre MPI workers
-  int stop = 0;
   std::thread sync_thread;
   if (mpi_size > 1) {
-    sync_thread = std::thread(mpi_sync, mpi_rank, mpi_size, &comm, num_cifras,
-                              &falta, &stop);
+    sync_thread =
+        std::thread(mpi_sync, mpi_rank, mpi_size, &comm, num_cifras, &falta);
   }
-
-  std::map<std::string, std::string> solucoes;
 
   // Usar todos threads disponíveis
   int num_threads = omp_get_max_threads();
@@ -145,11 +163,17 @@ int main(int argc, char *argv[]) {
   omp_set_num_threads(num_threads);
   fprintf(stderr, "p%d Usando %d threads\n", mpi_rank, num_threads);
 
+  std::map<std::string, std::string> solucoes;
   unsigned long long i = 0L, counter = 0;
 #pragma omp parallel reduction(+ : counter)
   {
-    crypt_data myData;
-    char *result = myData.crypt_3_buf;
+    // Inicializar sais (aceleração grande)
+    std::map<std::string, crypt_data> crypt_data_por_sal;
+    for (auto &ss : sais) {
+      crypt_data_por_sal[ss] = crypt_data();
+    }
+    crypt_data *crypt_pointer;
+    char *result;
     int thread_rank = omp_get_thread_num();
     int inicio = (mpi_rank * omp_get_num_threads()) + omp_get_thread_num();
     int passo = mpi_size * omp_get_num_threads();
@@ -158,7 +182,7 @@ int main(int argc, char *argv[]) {
     Senha senha(inicio);
     unsigned long long thread_i;
     std::set<int> thread_falta(falta);
-    for (thread_i = inicio; thread_i < maximo; thread_i += passo) {
+    for (thread_i = inicio; thread_i < maximo && !stop; thread_i += passo) {
       if ((falta.size() < thread_falta.size())) {
 // #pragma omp barrier
 #pragma omp critical(falta_global)
@@ -170,7 +194,8 @@ int main(int argc, char *argv[]) {
       for (auto &e : thread_falta) {
         // printf("p%d t%d %s %s\n", mpi_rank, thread_rank, cifras[e],
         //        senha.getSenha());
-        result = crypt_r(senha.getSenha(), cifras[e], &myData);
+        crypt_pointer = &(crypt_data_por_sal[sais[e]]);
+        result = crypt_r(senha.getSenha(), cifras[e], crypt_pointer);
         int ok = strncmp(result, cifras[e], 14) == 0;
 
         if (ok) {

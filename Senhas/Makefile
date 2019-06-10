@@ -3,7 +3,7 @@
 CC = g++
 FLAGS = -lm -lcrypt -fopenmp -pthread -std=c++11
 # OPTIMIZATION = -Ofast
-OPTIMIZATION = -Os
+OPTIMIZATION = -Ofast
 DEBFLAGS = -g -pg -O0
 
 quebra: src/quebra.cpp
@@ -14,8 +14,6 @@ teste: src/teste_wordgen.cpp
 
 debug: src/quebra.cpp
 	mpic++ -o quebra $^ $(FLAGS) $(DEBFLAGS)
-
-# Dependencias
 
 clean:
 	rm -f gmon.out main quebra

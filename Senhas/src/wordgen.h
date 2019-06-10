@@ -22,6 +22,15 @@ private:
       vetor[pos] = vetor[pos] % maxSize;
       vetor[++pos] += overflow;
     }
+
+    senha[0] = BASE64_CRYPT[vetor[0]];
+    senha[1] = BASE64_CRYPT[vetor[1]];
+    senha[2] = BASE64_CRYPT[vetor[2]];
+    senha[3] = BASE64_CRYPT[vetor[3]];
+    senha[4] = BASE64_CRYPT[vetor[4]];
+    senha[5] = BASE64_CRYPT[vetor[5]];
+    senha[6] = BASE64_CRYPT[vetor[6]];
+    senha[7] = BASE64_CRYPT[vetor[7]];
   }
 
 public:
@@ -49,14 +58,14 @@ public:
   }
 
   char *getSenha() {
-    senha[0] = BASE64_CRYPT[vetor[0]];
-    senha[1] = BASE64_CRYPT[vetor[1]];
-    senha[2] = BASE64_CRYPT[vetor[2]];
-    senha[3] = BASE64_CRYPT[vetor[3]];
-    senha[4] = BASE64_CRYPT[vetor[4]];
-    senha[5] = BASE64_CRYPT[vetor[5]];
-    senha[6] = BASE64_CRYPT[vetor[6]];
-    senha[7] = BASE64_CRYPT[vetor[7]];
+    // senha[0] = BASE64_CRYPT[vetor[0]];
+    // senha[1] = BASE64_CRYPT[vetor[1]];
+    // senha[2] = BASE64_CRYPT[vetor[2]];
+    // senha[3] = BASE64_CRYPT[vetor[3]];
+    // senha[4] = BASE64_CRYPT[vetor[4]];
+    // senha[5] = BASE64_CRYPT[vetor[5]];
+    // senha[6] = BASE64_CRYPT[vetor[6]];
+    // senha[7] = BASE64_CRYPT[vetor[7]];
     return senha;
   }
 
