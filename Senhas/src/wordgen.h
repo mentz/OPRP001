@@ -19,6 +19,8 @@ private:
 
   void avancarN(int n) {
     int overflow, pos = 0;
+
+    // TODO: Desenrolar esse while
     vetor[pos] += n;
     while ((overflow = (vetor[pos] / maxSize)) > 0 && pos < 8) {
       vetor[pos] = vetor[pos] % maxSize;
