@@ -70,18 +70,12 @@ void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm, int num_cifras,
 }
 
 void force_stop(int signal) {
-  fprintf(stderr, "Encerramento forçado\n");
+  fprintf(stderr, "Encerramento forçado: sinal %d\n", signal);
   stop = 1;
 }
 
 int main(int argc, char *argv[]) {
-  signal(SIGABRT, force_stop);
-  signal(SIGFPE, force_stop);
-  signal(SIGILL, force_stop);
   signal(SIGINT, force_stop);
-  signal(SIGSEGV, force_stop);
-  signal(SIGTERM, force_stop);
-  signal(SIGKILL, force_stop);
 
   int thread_level;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &thread_level);
@@ -214,7 +208,7 @@ int main(int argc, char *argv[]) {
         }
       }
 
-      if (((thread_i + 1) % 100000) == 0) {
+      if (((thread_i + 1) % 50000) == 0) {
         fprintf(stderr, "Realizado %2.f%% ou %llu de %llu\n",
                 (thread_i / (double)maximo) * 100, thread_i + 1, maximo);
       }
