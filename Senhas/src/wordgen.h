@@ -1,6 +1,8 @@
 #ifndef _OPRP_WORDGEN_
 #define _OPRP_WORDGEN_
 
+#include <string.h>
+
 #define MIN(a, b) ((a < b) ? a : b)
 #define MAX(a, b) ((a > b) ? a : b)
 #define BASE64_CRYPT                                                           \
@@ -20,17 +22,19 @@ private:
     vetor[pos] += n;
     while ((overflow = (vetor[pos] / maxSize)) > 0 && pos < 8) {
       vetor[pos] = vetor[pos] % maxSize;
+      senha[pos] = BASE64_CRYPT[vetor[pos]];
       vetor[++pos] += overflow;
     }
+    senha[pos] = BASE64_CRYPT[vetor[pos]];
 
-    senha[0] = BASE64_CRYPT[vetor[0]];
-    senha[1] = BASE64_CRYPT[vetor[1]];
-    senha[2] = BASE64_CRYPT[vetor[2]];
-    senha[3] = BASE64_CRYPT[vetor[3]];
-    senha[4] = BASE64_CRYPT[vetor[4]];
-    senha[5] = BASE64_CRYPT[vetor[5]];
-    senha[6] = BASE64_CRYPT[vetor[6]];
-    senha[7] = BASE64_CRYPT[vetor[7]];
+    // senha[0] = BASE64_CRYPT[vetor[0]];
+    // senha[1] = BASE64_CRYPT[vetor[1]];
+    // senha[2] = BASE64_CRYPT[vetor[2]];
+    // senha[3] = BASE64_CRYPT[vetor[3]];
+    // senha[4] = BASE64_CRYPT[vetor[4]];
+    // senha[5] = BASE64_CRYPT[vetor[5]];
+    // senha[6] = BASE64_CRYPT[vetor[6]];
+    // senha[7] = BASE64_CRYPT[vetor[7]];
   }
 
 public:
@@ -43,6 +47,8 @@ public:
     vetor[5] = -1;
     vetor[6] = -1;
     vetor[7] = -1;
+    memset(senha, 0, sizeof(char) * 16);
+    senha[0] = BASE64_CRYPT[0];
     avancarN(comeco);
   }
 
@@ -55,19 +61,11 @@ public:
     vetor[5] = -1;
     vetor[6] = -1;
     vetor[7] = -1;
+    memset(senha, 0, sizeof(char) * 16);
+    senha[0] = BASE64_CRYPT[0];
   }
 
-  char *getSenha() {
-    // senha[0] = BASE64_CRYPT[vetor[0]];
-    // senha[1] = BASE64_CRYPT[vetor[1]];
-    // senha[2] = BASE64_CRYPT[vetor[2]];
-    // senha[3] = BASE64_CRYPT[vetor[3]];
-    // senha[4] = BASE64_CRYPT[vetor[4]];
-    // senha[5] = BASE64_CRYPT[vetor[5]];
-    // senha[6] = BASE64_CRYPT[vetor[6]];
-    // senha[7] = BASE64_CRYPT[vetor[7]];
-    return senha;
-  }
+  char *getSenha() { return senha; }
 
   void prox() { avancarN(1); }
 
