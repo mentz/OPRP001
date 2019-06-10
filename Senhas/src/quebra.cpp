@@ -29,13 +29,14 @@ void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm, int num_cifras,
     memset(my_list, -1, sizeof(int) * num_cifras);
     memset(other_list, -1, sizeof(int) * num_cifras);
     int cc = 0;
-    my_set = std::set<int>((*falta).begin(), (*falta).end());
+#pragma omp critical(falta_global)
+    { my_set = std::set<int>((*falta).begin(), (*falta).end()); }
     for (auto e : my_set) {
       my_list[cc++] = e;
     }
 
     std::vector<int> new_list;
-    sleep_for(4000);
+    sleep_for(2000);
     for (int i = 0; i < mpi_size; i++) {
       if (i == mpi_rank) {
         // Enviar minha lista
@@ -61,7 +62,8 @@ void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm, int num_cifras,
       printf("%d ", e);
     }
     printf("\n");
-    (*falta) = std::set<int>(my_set.begin(), my_set.end());
+#pragma omp critical(falta_global)
+    { (*falta) = std::set<int>(my_set.begin(), my_set.end()); }
   }
 }
 
@@ -77,18 +79,14 @@ int main(int argc, char *argv[]) {
 
   // Obter comprimento máximo
   int comprimento = 0;
-  // int num_threads = 4;
   unsigned long long maximo = 64L;
   if (argc == 2) {
     sscanf(argv[1], "%d", &comprimento);
-    // sscanf(argv[2], "%d", &num_threads);
-    // printf("p%d argv[1] = %s\n", mpi_rank, argv[1]);
     comprimento = MIN(8, comprimento);
     for (int i = 1; i < comprimento; i++) {
       maximo++;
       maximo *= (unsigned long long)maxSize;
     }
-    // printf("p%d max = %llu\n", mpi_rank, maximo);
   } else {
     fprintf(stderr, "Falta argumento: %s <comprimento_maximo> <num_threads>\n",
             argv[0]);
@@ -133,8 +131,13 @@ int main(int argc, char *argv[]) {
 
   // Iniciar thread de sincronização entre MPI workers
   int stop = 0;
-  std::thread sync_thread(mpi_sync, mpi_rank, mpi_size, &comm, num_cifras,
-                          &falta, &stop);
+  std::thread sync_thread;
+  if (mpi_size > 1) {
+    sync_thread = std::thread(mpi_sync, mpi_rank, mpi_size, &comm, num_cifras,
+                              &falta, &stop);
+  }
+
+  std::map<std::string, std::string> solucoes;
 
   // Usar todos threads disponíveis
   int num_threads = omp_get_max_threads();
@@ -154,36 +157,34 @@ int main(int argc, char *argv[]) {
             mpi_rank, thread_rank, inicio, passo, omp_get_num_threads());
     Senha senha(inicio);
     unsigned long long thread_i;
-    std::set<int> thread_falta(falta.begin(), falta.end());
+    std::set<int> thread_falta(falta);
     for (thread_i = inicio; thread_i < maximo; thread_i += passo) {
-      if ((counter % 10000) == 0) {
-#pragma omp barrier
+      if ((falta.size() < thread_falta.size())) {
+// #pragma omp barrier
 #pragma omp critical(falta_global)
-        { thread_falta = std::set<int>(falta.begin(), falta.end()); }
-
+        { thread_falta = falta; }
         if ((int)thread_falta.size() == 0) {
           break;
         }
       }
       for (auto &e : thread_falta) {
-        // printf("p%d t%d %s == %s?\n", mpi_rank, thread_rank, cifras[e],
+        // printf("p%d t%d %s %s\n", mpi_rank, thread_rank, cifras[e],
         //        senha.getSenha());
         result = crypt_r(senha.getSenha(), cifras[e], &myData);
         int ok = strncmp(result, cifras[e], 14) == 0;
 
         if (ok) {
-          printf("p%*d, t%*d @ %2.f%%: %s = %s\n", (int)ceil(log10(mpi_size)),
-                 mpi_rank, (int)ceil(log10(passo)), thread_rank,
-                 (thread_i / (double)maximo) * 100, cifras[e],
-                 senha.getSenha());
-          fflush(stdout);
+          // printf("p%*d, t%*d @ %2.f%%: %s = %s\n",
+          // (int)ceil(log10(mpi_size)),
+          //        mpi_rank, (int)ceil(log10(passo)), thread_rank,
+          //        (thread_i / (double)maximo) * 100, cifras[e],
+          //        senha.getSenha());
+          // fflush(stdout);
+          solucoes[cifras[e]] = senha.getSenha();
 
 #pragma omp critical(falta_global)
-          {
-            if (falta.count(e) > 0) {
-              falta.erase(e);
-              thread_falta = falta;
-            }
+          if (falta.count(e) > 0) {
+            falta.erase(e);
           }
         }
       }
@@ -196,10 +197,16 @@ int main(int argc, char *argv[]) {
       senha.prox(passo);
       counter++;
     }
+#pragma omp barrier
   }
   stop = true;
-  sync_thread.join();
+  if (mpi_size > 1) {
+    sync_thread.join();
+  }
   fprintf(stderr, "[%d] terminou em %llu iterações!!!!\n", mpi_rank, counter);
+  for (auto &e : solucoes) {
+    printf("%s %s\n", e.first.data(), e.second.data());
+  }
 
   MPI_Finalize();
 

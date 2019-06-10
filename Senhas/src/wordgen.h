@@ -19,7 +19,7 @@ private:
     int overflow, pos = 0;
     vetor[pos] += n;
     while ((overflow = (vetor[pos] / maxSize)) > 0 && pos < 8) {
-      vetor[pos] %= maxSize;
+      vetor[pos] = vetor[pos] % maxSize;
       vetor[++pos] += overflow;
     }
   }
