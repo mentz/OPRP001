@@ -221,9 +221,9 @@ int main(int argc, char *argv[]) {
 #pragma omp barrier
   }
   stop = true;
-  if (mpi_size > 1) {
-    sync_thread.join();
-  }
+  // if (mpi_size > 1) {
+  //   sync_thread.join();
+  // }
   fprintf(stderr, "[%d] terminou em %llu iterações!!!!\n", mpi_rank, counter);
   // for (auto &e : solucoes) {
   //   printf("%s %s\n", e.first.data(), e.second.data());
