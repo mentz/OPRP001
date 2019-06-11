@@ -16,9 +16,10 @@
 #include <vector>
 
 int stop = 0;
+int num_cifras = 0;
+std::set<int> falta = std::set<int>();
 
-void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm, int num_cifras,
-              std::set<int> *falta) {
+void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm) {
   // Seção de sincronização de progresso
   int *my_list = new int[num_cifras];
   int *other_list = new int[num_cifras];
@@ -26,13 +27,13 @@ void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm, int num_cifras,
 
   fprintf(stderr, "P%d iniciando sincronia MPI\n", mpi_rank);
 
-  while ((*falta).size() > 0 && !stop) {
+  while (falta.size() > 0 && !stop) {
     // Preparar lista de cifras restantes
     memset(my_list, -1, sizeof(int) * num_cifras);
     memset(other_list, -1, sizeof(int) * num_cifras);
-    int cc = 0;
 #pragma omp critical(falta_global)
-    { my_set = std::set<int>((*falta).begin(), (*falta).end()); }
+    { my_set = falta; }
+    int cc = 0;
     for (auto e : my_set) {
       my_list[cc++] = e;
     }
@@ -54,18 +55,19 @@ void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm, int num_cifras,
           if (other_list[j] > -1)
             other_set.insert(other_list[j]);
         }
-        set_intersection(my_set.begin(), my_set.end(), other_set.begin(),
-                         other_set.end(), std::back_inserter(new_list));
+        std::set_intersection(my_set.begin(), my_set.end(), other_set.begin(),
+                              other_set.end(), std::back_inserter(new_list));
         my_set = std::set<int>(new_list.begin(), new_list.end());
       }
     }
-    printf("[%d] new set: ", mpi_rank);
-    for (auto &e : my_set) {
-      printf("%d ", e);
+    printf("[%d] removed: ", mpi_rank);
+    for (int i = 0; i < num_cifras; i++) {
+      if (my_set.count(i) == 0)
+        printf("%d ", i);
     }
     printf("\n");
 #pragma omp critical(falta_global)
-    { (*falta) = std::set<int>(my_set.begin(), my_set.end()); }
+    { falta = my_set; }
   }
 }
 
@@ -108,7 +110,6 @@ int main(int argc, char *argv[]) {
 
   // Ler senhas e sincronizar com outros processos MPI
   int num_cifras = 0;
-  std::set<int> falta;
   std::vector<std::string> sais;
   char **cifras;
   char *cbloco;
@@ -138,7 +139,7 @@ int main(int argc, char *argv[]) {
     MPI_Bcast(cbloco, num_cifras * 32, MPI_CHAR, 0, comm);
     for (int i = 0; i < num_cifras; i++) {
       cifras[i] = &cbloco[i * 32];
-      std::string cifra(cifras[i], cifras[i + 16]);
+      std::string cifra(cbloco[i*32], cbloco[i*32 + 16]);
       falta.insert(i);
       sais[i] = cifra.substr(0, 2);
     }
@@ -146,10 +147,10 @@ int main(int argc, char *argv[]) {
 
   // Iniciar thread de sincronização entre MPI workers
   std::thread sync_thread;
-  if (mpi_size > 1) {
-    sync_thread =
-        std::thread(mpi_sync, mpi_rank, mpi_size, &comm, num_cifras, &falta);
-  }
+  // if (mpi_size > 1) {
+  //   sync_thread =
+  //       std::thread(mpi_sync, mpi_rank, mpi_size, &comm);
+  // }
 
   // Usar todos threads disponíveis
   int num_threads = omp_get_max_threads();
@@ -198,8 +199,9 @@ int main(int argc, char *argv[]) {
           //        mpi_rank, (int)ceil(log10(passo)), thread_rank,
           //        (thread_i / (double)maximo) * 100, cifras[e],
           //        senha.getSenha());
-          // fflush(stdout);
-          solucoes[cifras[e]] = senha.getSenha();
+          printf("%s %s\n", cifras[e], senha.getSenha());
+          fflush(stdout);
+          // solucoes[cifras[e]] = senha.getSenha();
 
 #pragma omp critical(falta_global)
           if (falta.count(e) > 0) {
@@ -223,9 +225,9 @@ int main(int argc, char *argv[]) {
     sync_thread.join();
   }
   fprintf(stderr, "[%d] terminou em %llu iterações!!!!\n", mpi_rank, counter);
-  for (auto &e : solucoes) {
-    printf("%s %s\n", e.first.data(), e.second.data());
-  }
+  // for (auto &e : solucoes) {
+  //   printf("%s %s\n", e.first.data(), e.second.data());
+  // }
 
   MPI_Finalize();
 
