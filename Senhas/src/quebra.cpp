@@ -18,56 +18,29 @@
 int stop = 0;
 int num_cifras = 0;
 std::set<int> falta = std::set<int>();
+int mpi_rank;
+int mpi_size;
+MPI_Comm comm = MPI_COMM_WORLD;
 
-void mpi_sync(int mpi_rank, int mpi_size, MPI_Comm *comm) {
+void mpi_master_listener() {
+  std::set<int> done;
+  // Receber notificação de cifra K quebrada,
+  //   broadcast de K para todos workers.
+
+  // Processar a lista para que o master também retire os prontos
+}
+
+void mpi_worker_listener() {
   // Seção de sincronização de progresso
   int *my_list = new int[num_cifras];
-  int *other_list = new int[num_cifras];
-  std::set<int> my_set;
+  std::set<int> done;
 
-  fprintf(stderr, "P%d iniciando sincronia MPI\n", mpi_rank);
+  fprintf(stderr, "P%d iniciando mpi_worker_listener\n", mpi_rank);
 
   while (falta.size() > 0 && !stop) {
-    // Preparar lista de cifras restantes
-    memset(my_list, -1, sizeof(int) * num_cifras);
-    memset(other_list, -1, sizeof(int) * num_cifras);
-#pragma omp critical(falta_global)
-    { my_set = falta; }
-    int cc = 0;
-    for (auto e : my_set) {
-      my_list[cc++] = e;
-    }
-
-    std::vector<int> new_list;
-    sleep_for(2000);
-    for (int i = 0; i < mpi_size; i++) {
-      if (i == mpi_rank) {
-        // Enviar minha lista
-        fprintf(stderr, "Processo %d enviando lista\n", mpi_rank);
-        MPI_Bcast(my_list, num_cifras, MPI_INT, mpi_rank, *comm);
-      } else {
-        // Receber lista de alguém
-        fprintf(stderr, "Processo %d recebendo lista do processo %d\n",
-                mpi_rank, i);
-        MPI_Bcast(other_list, num_cifras, MPI_INT, i, *comm);
-        std::set<int> other_set;
-        for (int j = 0; j < num_cifras; j++) {
-          if (other_list[j] > -1)
-            other_set.insert(other_list[j]);
-        }
-        std::set_intersection(my_set.begin(), my_set.end(), other_set.begin(),
-                              other_set.end(), std::back_inserter(new_list));
-        my_set = std::set<int>(new_list.begin(), new_list.end());
-      }
-    }
-    printf("[%d] removed: ", mpi_rank);
-    for (int i = 0; i < num_cifras; i++) {
-      if (my_set.count(i) == 0)
-        printf("%d ", i);
-    }
-    printf("\n");
-#pragma omp critical(falta_global)
-    { falta = my_set; }
+    // Receber int K do broadcast do root
+    //   adicionar esse int K no set done.
+    // Recriar o set falta tirando o set done.
   }
 }
 
@@ -139,7 +112,7 @@ int main(int argc, char *argv[]) {
     MPI_Bcast(cbloco, num_cifras * 32, MPI_CHAR, 0, comm);
     for (int i = 0; i < num_cifras; i++) {
       cifras[i] = &cbloco[i * 32];
-      std::string cifra(cbloco[i*32], cbloco[i*32 + 16]);
+      std::string cifra(cbloco[i * 32], cbloco[i * 32 + 16]);
       falta.insert(i);
       sais[i] = cifra.substr(0, 2);
     }
