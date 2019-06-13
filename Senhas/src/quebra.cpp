@@ -15,32 +15,78 @@
 #include <string>
 #include <vector>
 
+#define WAIT_TIME 100
+
 int stop = 0;
 int num_cifras = 0;
 std::set<int> falta = std::set<int>();
 int mpi_rank;
 int mpi_size;
 MPI_Comm comm = MPI_COMM_WORLD;
+int falta_size = 0;
 
-void mpi_master_listener() {
+void mpi_master_relay() {
   std::set<int> done;
+  int next_done;
+  MPI_Request request;
+  MPI_Status status;
+
+  fprintf(stderr, "P%d iniciando mpi_master_relay\n", mpi_rank);
+
   // Receber notificação de cifra K quebrada,
   //   broadcast de K para todos workers.
+  while (!stop) {
+    int flag;
+    MPI_Irecv(&next_done, 1, MPI_INT, MPI_ANY_SOURCE, 0, comm, &request);
+    sleep_for(WAIT_TIME);
+    MPI_Test(&request, &flag, &status);
+    if (flag) {
+      done.insert(next_done);
 
-  // Processar a lista para que o master também retire os prontos
+      // Processar a lista para que o master também retire os prontos
+      #pragma omp critical(falta_global)
+      {
+        if (falta.count(next_done) > 0)
+          falta.erase(next_done);
+        falta_size = falta.size();
+      }
+
+      fprintf(stderr, "P%d removendo cifra %d\n", mpi_rank, next_done);
+
+      // Replicar para os workers
+      MPI_Bcast(&next_done, 1, MPI_INT, 0, comm);
+    }
+  }
 }
 
 void mpi_worker_listener() {
   // Seção de sincronização de progresso
-  int *my_list = new int[num_cifras];
   std::set<int> done;
+  int next_done;
+  MPI_Request request;
+  MPI_Status status;
 
   fprintf(stderr, "P%d iniciando mpi_worker_listener\n", mpi_rank);
 
   while (falta.size() > 0 && !stop) {
+    int flag;
     // Receber int K do broadcast do root
     //   adicionar esse int K no set done.
-    // Recriar o set falta tirando o set done.
+    MPI_Ibcast(&next_done, 1, MPI_INT, 0, comm, &request);
+    sleep_for(WAIT_TIME);
+    MPI_Test(&request, &flag, &status);
+    if (flag) {
+      // Processar a lista para que o master também retire os prontos
+      #pragma omp critical(falta_global)
+      {
+        if (falta.count(next_done) > 0)
+          falta.erase(next_done);
+        
+        falta_size = falta.size();
+      }
+
+      fprintf(stderr, "P%d removendo cifra %d\n", mpi_rank, next_done);
+    }
   }
 }
 
@@ -53,10 +99,10 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, force_stop);
 
   int thread_level;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &thread_level);
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &thread_level);
 
-  int mpi_rank = 0;
-  int mpi_size = 1;
+  mpi_rank = 0;
+  mpi_size = 1;
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm, &mpi_rank);
   MPI_Comm_size(comm, &mpi_size);
@@ -82,7 +128,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Ler senhas e sincronizar com outros processos MPI
-  int num_cifras = 0;
+  num_cifras = 0;
   std::vector<std::string> sais;
   char **cifras;
   char *cbloco;
@@ -118,12 +164,17 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  falta_size = falta.size();
+
   // Iniciar thread de sincronização entre MPI workers
-  std::thread sync_thread;
-  // if (mpi_size > 1) {
-  //   sync_thread =
-  //       std::thread(mpi_sync, mpi_rank, mpi_size, &comm);
-  // }
+  std::thread *sync_thread;
+  if (mpi_size > 1) {
+    if (mpi_rank == 0)
+      sync_thread = new std::thread(mpi_master_relay);
+    else {
+      sync_thread = new std::thread(mpi_worker_listener);
+    }
+  }
 
   // Usar todos threads disponíveis
   int num_threads = omp_get_max_threads();
@@ -150,14 +201,15 @@ int main(int argc, char *argv[]) {
     Senha senha(inicio);
     unsigned long long thread_i;
     std::set<int> thread_falta(falta);
+    int thread_falta_size = num_cifras;
     for (thread_i = inicio; thread_i < maximo && !stop; thread_i += passo) {
-      if ((falta.size() < thread_falta.size())) {
-// #pragma omp barrier
+      // if ((falta.size() < thread_falta.size())) {
+      if (falta_size < thread_falta_size) {
+
 #pragma omp critical(falta_global)
-        { thread_falta = falta; }
-        if ((int)thread_falta.size() == 0) {
-          break;
-        }
+        thread_falta = falta;
+
+        thread_falta_size = thread_falta.size();
       }
       for (auto &e : thread_falta) {
         // printf("p%d t%d %s %s\n", mpi_rank, thread_rank, cifras[e],
@@ -175,10 +227,18 @@ int main(int argc, char *argv[]) {
           printf("%s %s\n", cifras[e], senha.getSenha());
           fflush(stdout);
           // solucoes[cifras[e]] = senha.getSenha();
+          int next_done = e;
 
-#pragma omp critical(falta_global)
-          if (falta.count(e) > 0) {
-            falta.erase(e);
+          if (mpi_rank == 0) {
+  #pragma omp critical(falta_global)
+            if (falta.count(e) > 0) {
+              falta.erase(e);
+            }
+
+            // Replicar para os workers
+            MPI_Bcast(&next_done, 1, MPI_INT, 0, comm);
+          } else {
+            MPI_Send(&next_done, 1, MPI_INT, 0, 0, comm);
           }
         }
       }
@@ -194,9 +254,10 @@ int main(int argc, char *argv[]) {
 #pragma omp barrier
   }
   stop = true;
-  // if (mpi_size > 1) {
-  //   sync_thread.join();
-  // }
+  if (mpi_size > 1) {
+    sync_thread->join();
+    delete sync_thread;
+  }
   fprintf(stderr, "[%d] terminou em %llu iterações!!!!\n", mpi_rank, counter);
   // for (auto &e : solucoes) {
   //   printf("%s %s\n", e.first.data(), e.second.data());
