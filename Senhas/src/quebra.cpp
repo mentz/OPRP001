@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+#include "crypt/crypt_r.h"
+
 #define WAIT_TIME 100
 
 int stop = 0;
@@ -43,8 +45,8 @@ void mpi_master_relay() {
     if (flag) {
       done.insert(next_done);
 
-      // Processar a lista para que o master também retire os prontos
-      #pragma omp critical(falta_global)
+// Processar a lista para que o master também retire os prontos
+#pragma omp critical(falta_global)
       {
         if (falta.count(next_done) > 0)
           falta.erase(next_done);
@@ -76,12 +78,12 @@ void mpi_worker_listener() {
     sleep_for(WAIT_TIME);
     MPI_Test(&request, &flag, &status);
     if (flag) {
-      // Processar a lista para que o master também retire os prontos
-      #pragma omp critical(falta_global)
+// Processar a lista para que o master também retire os prontos
+#pragma omp critical(falta_global)
       {
         if (falta.count(next_done) > 0)
           falta.erase(next_done);
-        
+
         falta_size = falta.size();
       }
 
@@ -118,7 +120,7 @@ int main(int argc, char *argv[]) {
       maximo *= (unsigned long long)maxSize;
     }
   } else {
-    fprintf(stderr, "Falta argumento: %s <comprimento_maximo> <num_threads>\n",
+    fprintf(stderr, "Falta argumento: %s <comprimento_maximo> [início]\n",
             argv[0]);
     fprintf(stderr, "Uso: Informe pela entrada padrão o número de cifras, "
                     "número de threads  e em "
@@ -141,11 +143,16 @@ int main(int argc, char *argv[]) {
     cbloco = new char[num_cifras * 32];
     std::string cifra;
     sais = std::vector<std::string>(num_cifras);
+    std::vector<std::string> vec_cifras;
     for (int i = 0; i < num_cifras; i++) {
       getline(std::cin, cifra);
-      cifras[i] = &cbloco[i * 32];
-      strncpy(cifras[i], cifra.data(), 16);
       falta.insert(i);
+      vec_cifras.push_back(cifra);
+    }
+    std::sort(vec_cifras.begin(), vec_cifras.end());
+    for (int i = 0; i < num_cifras; i++) {
+      cifras[i] = &cbloco[i * 32];
+      strncpy(cifras[i], vec_cifras[i].data(), 16);
       sais[i] = cifra.substr(0, 2);
     }
     MPI_Bcast(cifras[0], num_cifras * 32, MPI_CHAR, 0, comm);
@@ -187,11 +194,14 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel reduction(+ : counter)
   {
     // Inicializar sais (aceleração grande)
-    std::map<std::string, crypt_data> crypt_data_por_sal;
+    // std::map<std::string, crypt_data> crypt_data_por_sal;
+    std::map<std::string, crypt_des_data> crypt_data_por_sal;
     for (auto &ss : sais) {
-      crypt_data_por_sal[ss] = crypt_data();
+      // crypt_data_por_sal[ss] = crypt_data();
+      crypt_data_por_sal[ss] = crypt_des_data();
     }
-    crypt_data *crypt_pointer;
+    // crypt_data *crypt_pointer;
+    crypt_des_data *crypt_pointer;
     char *result;
     int thread_rank = omp_get_thread_num();
     int inicio = (mpi_rank * omp_get_num_threads()) + omp_get_thread_num();
@@ -215,7 +225,8 @@ int main(int argc, char *argv[]) {
         // printf("p%d t%d %s %s\n", mpi_rank, thread_rank, cifras[e],
         //        senha.getSenha());
         crypt_pointer = &(crypt_data_por_sal[sais[e]]);
-        result = crypt_r(senha.getSenha(), cifras[e], crypt_pointer);
+        // result = crypt_r(senha.getSenha(), cifras[e], crypt_pointer);
+        result = crypt_des(senha.getSenha(), cifras[e], crypt_pointer);
         int ok = strncmp(result, cifras[e], 14) == 0;
 
         if (ok) {
@@ -229,8 +240,8 @@ int main(int argc, char *argv[]) {
           // solucoes[cifras[e]] = senha.getSenha();
           int next_done = e;
 
-          if (mpi_rank == 0) {
-  #pragma omp critical(falta_global)
+          if (mpi_rank == 0 || mpi_size == 1) {
+#pragma omp critical(falta_global)
             if (falta.count(e) > 0) {
               falta.erase(e);
             }
