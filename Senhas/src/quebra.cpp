@@ -131,7 +131,8 @@ int main(int argc, char *argv[]) {
 
   // Ler senhas e sincronizar com outros processos MPI
   num_cifras = 0;
-  std::vector<std::string> sais;
+  std::map<std::string, int> sais;
+  std::map<std::string, std::string> sal_por_cifra;
   char **cifras;
   char *cbloco;
   if (mpi_rank == 0) {
@@ -153,7 +154,8 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < num_cifras; i++) {
       cifras[i] = &cbloco[i * 32];
       strncpy(cifras[i], vec_cifras[i].data(), 16);
-      sais[i] = cifra.substr(0, 2);
+      sais[cifra.substr(0, 2)] = sais.size();
+      sal_por_cifra[i] = cifra.substr(0, 2);
     }
     MPI_Bcast(cifras[0], num_cifras * 32, MPI_CHAR, 0, comm);
   } else {
@@ -167,7 +169,8 @@ int main(int argc, char *argv[]) {
       cifras[i] = &cbloco[i * 32];
       std::string cifra(cbloco[i * 32], cbloco[i * 32 + 16]);
       falta.insert(i);
-      sais[i] = cifra.substr(0, 2);
+      sais[cifra.substr(0, 2)] = sais.size();
+      sal_por_cifra[i] = cifra.substr(0, 2);
     }
   }
 
@@ -221,13 +224,18 @@ int main(int argc, char *argv[]) {
 
         thread_falta_size = thread_falta.size();
       }
+
+      for (auto &e: sais) {
+        crypt_pointer = &(crypt_data_por_sal[sais[e]]);
+        crypt_r(senha.getSenha(), e.first, crypt_pointer);
+      }
+
       for (auto &e : thread_falta) {
         // printf("p%d t%d %s %s\n", mpi_rank, thread_rank, cifras[e],
         //        senha.getSenha());
         crypt_pointer = &(crypt_data_por_sal[sais[e]]);
-        result = crypt_r(senha.getSenha(), cifras[e], crypt_pointer);
         // result = crypt_des(senha.getSenha(), cifras[e], crypt_pointer);
-        int ok = strncmp(result, cifras[e], 14) == 0;
+        int ok = strncmp(crypt_pointer->crypt_3_buf, cifras[e], 14) == 0;
 
         if (ok) {
           // printf("p%*d, t%*d @ %2.f%%: %s = %s\n",
