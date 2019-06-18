@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-#include "crypt/crypt_r.h"
+// #include "crypt/crypt_r.h"
 
 #define WAIT_TIME 100
 
@@ -194,14 +194,14 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel reduction(+ : counter)
   {
     // Inicializar sais (aceleração grande)
-    // std::map<std::string, crypt_data> crypt_data_por_sal;
-    std::map<std::string, crypt_des_data> crypt_data_por_sal;
+    std::map<std::string, crypt_data> crypt_data_por_sal;
+    // std::map<std::string, crypt_des_data> crypt_data_por_sal;
     for (auto &ss : sais) {
-      // crypt_data_por_sal[ss] = crypt_data();
-      crypt_data_por_sal[ss] = crypt_des_data();
+      crypt_data_por_sal[ss] = crypt_data();
+      // crypt_data_por_sal[ss] = crypt_des_data();
     }
-    // crypt_data *crypt_pointer;
-    crypt_des_data *crypt_pointer;
+    crypt_data *crypt_pointer;
+    // crypt_des_data *crypt_pointer;
     char *result;
     int thread_rank = omp_get_thread_num();
     int inicio = (mpi_rank * omp_get_num_threads()) + omp_get_thread_num();
@@ -225,8 +225,8 @@ int main(int argc, char *argv[]) {
         // printf("p%d t%d %s %s\n", mpi_rank, thread_rank, cifras[e],
         //        senha.getSenha());
         crypt_pointer = &(crypt_data_por_sal[sais[e]]);
-        // result = crypt_r(senha.getSenha(), cifras[e], crypt_pointer);
-        result = crypt_des(senha.getSenha(), cifras[e], crypt_pointer);
+        result = crypt_r(senha.getSenha(), cifras[e], crypt_pointer);
+        // result = crypt_des(senha.getSenha(), cifras[e], crypt_pointer);
         int ok = strncmp(result, cifras[e], 14) == 0;
 
         if (ok) {
