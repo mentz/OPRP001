@@ -26,59 +26,57 @@ typedef struct {
   char output[21];
 } crypt_des_data;
 
-__device__ bool strncmp_cuda(const char *a, const char* b, const int n) {
-    for (int i = 0; i < n; i++) {
-        if (a[i] != b[i]) return 256;
-    }
-    return 0;
+__device__ bool strncmp_cuda(const char *a, const char *b, const int n) {
+  for (int i = 0; i < n; i++) {
+    if (a[i] != b[i])
+      return 256;
+  }
+  return 0;
 }
 
 __device__ uint32_t ntohl(uint32_t const net) {
-    union {
-        uint8_t data[4];
-        uint32_t orig;
-    } doo;
-    // memcpy(&data, &net, sizeof(data));
-    doo.orig = net;
+  union {
+    uint8_t data[4];
+    uint32_t orig;
+  } doo;
+  // memcpy(&data, &net, sizeof(data));
+  doo.orig = net;
 
-    return ((uint32_t) doo.data[3] << 0)
-         | ((uint32_t) doo.data[2] << 8)
-         | ((uint32_t) doo.data[1] << 16)
-         | ((uint32_t) doo.data[0] << 24);
+  return ((uint32_t)doo.data[3] << 0) | ((uint32_t)doo.data[2] << 8) |
+         ((uint32_t)doo.data[1] << 16) | ((uint32_t)doo.data[0] << 24);
 }
 
 __device__ uint32_t htonl(uint32_t const host) {
-    // uint8_t data[4] = {};
-    // memcpy(&net, &data, sizeof(data));
-    union {
-        uint8_t data[4];
-        uint32_t orig;
-    } doo;
-    doo.orig = net;
+  // uint8_t data[4] = {};
+  // memcpy(&net, &data, sizeof(data));
+  union {
+    uint8_t data[4];
+    uint32_t orig;
+  } doo;
+  doo.orig = net;
 
-    return ((uint32_t) doo.data[0] << 0)
-         | ((uint32_t) doo.data[1] << 8)
-         | ((uint32_t) doo.data[2] << 16)
-         | ((uint32_t) doo.data[3] << 24);
+  return ((uint32_t)doo.data[0] << 0) | ((uint32_t)doo.data[1] << 8) |
+         ((uint32_t)doo.data[2] << 16) | ((uint32_t)doo.data[3] << 24);
 }
 
-__constant__ u_char IP[64] = {58, 50, 42, 34, 26, 18, 10, 2,  60, 52, 44, 36, 28,
-                        20, 12, 4,  62, 54, 46, 38, 30, 22, 14, 6,  64, 56,
-                        48, 40, 32, 24, 16, 8,  57, 49, 41, 33, 25, 17, 9,
-                        1,  59, 51, 43, 35, 27, 19, 11, 3,  61, 53, 45, 37,
-                        29, 21, 13, 5,  63, 55, 47, 39, 31, 23, 15, 7};
+__constant__ u_char IP[64] = {
+    58, 50, 42, 34, 26, 18, 10, 2, 60, 52, 44, 36, 28, 20, 12, 4,
+    62, 54, 46, 38, 30, 22, 14, 6, 64, 56, 48, 40, 32, 24, 16, 8,
+    57, 49, 41, 33, 25, 17, 9,  1, 59, 51, 43, 35, 27, 19, 11, 3,
+    61, 53, 45, 37, 29, 21, 13, 5, 63, 55, 47, 39, 31, 23, 15, 7};
 
 __constant__ u_char key_perm[56] = {
     57, 49, 41, 33, 25, 17, 9,  1,  58, 50, 42, 34, 26, 18, 10, 2,  59, 51, 43,
     35, 27, 19, 11, 3,  60, 52, 44, 36, 63, 55, 47, 39, 31, 23, 15, 7,  62, 54,
     46, 38, 30, 22, 14, 6,  61, 53, 45, 37, 29, 21, 13, 5,  28, 20, 12, 4};
 
-__constant__ u_char key_shifts[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
+__constant__ u_char key_shifts[16] = {1, 1, 2, 2, 2, 2, 2, 2,
+                                      1, 2, 2, 2, 2, 2, 2, 1};
 
-__constant__ u_char comp_perm[48] = {14, 17, 11, 24, 1,  5,  3,  28, 15, 6,  21, 10,
-                               23, 19, 12, 4,  26, 8,  16, 7,  27, 20, 13, 2,
-                               41, 52, 31, 37, 47, 55, 30, 40, 51, 45, 33, 48,
-                               44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32};
+__constant__ u_char comp_perm[48] = {
+    14, 17, 11, 24, 1,  5,  3,  28, 15, 6,  21, 10, 23, 19, 12, 4,
+    26, 8,  16, 7,  27, 20, 13, 2,  41, 52, 31, 37, 47, 55, 30, 40,
+    51, 45, 33, 48, 44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32};
 
 /*
  *	No E box is used, as it's replaced by some ANDs, shifts, and ORs.
@@ -119,8 +117,8 @@ __constant__ u_char sbox[8][64] = {
      2,  1,  14, 7, 4,  10, 8,  13, 15, 12, 9,  0,  3,  5,  6,  11}};
 
 __constant__ u_char pbox[32] = {16, 7, 20, 21, 29, 12, 28, 17, 1,  15, 23,
-                          26, 5, 18, 31, 10, 2,  8,  24, 14, 32, 27,
-                          3,  9, 19, 13, 30, 6,  22, 11, 4,  25};
+                                26, 5, 18, 31, 10, 2,  8,  24, 14, 32, 27,
+                                3,  9, 19, 13, 30, 6,  22, 11, 4,  25};
 
 __constant__ u_int32_t bits32[32] = {
     0x80000000, 0x40000000, 0x20000000, 0x10000000, 0x08000000, 0x04000000,
@@ -370,7 +368,7 @@ __device__ int des_setkey(const char *key, crypt_des_data *data) {
 }
 
 __device__ int do_des(u_int32_t l_in, u_int32_t r_in, u_int32_t *l_out,
-                  u_int32_t *r_out, int count, crypt_des_data *data) {
+                      u_int32_t *r_out, int count, crypt_des_data *data) {
   /*
    *	l_in, r_in, l_out, and r_out are in pseudo-"big-endian" format.
    */
@@ -465,7 +463,7 @@ __device__ int do_des(u_int32_t l_in, u_int32_t r_in, u_int32_t *l_out,
 }
 
 __device__ int des_cipher(const char *in, char *out, u_long salt, int count,
-                      crypt_des_data *data) {
+                          crypt_des_data *data) {
   u_int32_t l_out, r_out, rawl, rawr;
   int retval;
   union {
@@ -490,7 +488,8 @@ __device__ int des_cipher(const char *in, char *out, u_long salt, int count,
   return (retval);
 }
 
-__device__ char *crypt_des_cuda(const char *key, const char *setting, crypt_des_data *data) {
+__device__ char *crypt_des_cuda(const char *key, const char *setting,
+                                crypt_des_data *data) {
   int i;
   u_int32_t count, salt, l, r0, r1, keybuf[2];
   u_char *p, *q;
