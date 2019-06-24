@@ -34,29 +34,29 @@ __device__ bool strncmp_cuda(const char *a, const char *b, const int n) {
   return 0;
 }
 
-__device__ uint32_t ntohl(uint32_t const net) {
+__device__ u_int32_t ntohl(u_int32_t const net) {
   union {
-    uint8_t data[4];
-    uint32_t orig;
+    u_int8_t data[4];
+    u_int32_t orig;
   } doo;
   // memcpy(&data, &net, sizeof(data));
   doo.orig = net;
 
-  return ((uint32_t)doo.data[3] << 0) | ((uint32_t)doo.data[2] << 8) |
-         ((uint32_t)doo.data[1] << 16) | ((uint32_t)doo.data[0] << 24);
+  return ((u_int32_t)doo.data[3] << 0) | ((u_int32_t)doo.data[2] << 8) |
+         ((u_int32_t)doo.data[1] << 16) | ((u_int32_t)doo.data[0] << 24);
 }
 
-__device__ uint32_t htonl(uint32_t const host) {
-  // uint8_t data[4] = {};
-  // memcpy(&net, &data, sizeof(data));
+__device__ u_int32_t htonl(u_int32_t const host) {
+  // u_int8_t data[4] = {};
   union {
-    uint8_t data[4];
-    uint32_t orig;
+    u_int8_t data[4];
+    u_int32_t orig;
   } doo;
-  doo.orig = net;
+  // memcpy(&net, &data, sizeof(data));
+  doo.orig = host;
 
-  return ((uint32_t)doo.data[0] << 0) | ((uint32_t)doo.data[1] << 8) |
-         ((uint32_t)doo.data[2] << 16) | ((uint32_t)doo.data[3] << 24);
+  return ((u_int32_t)doo.data[0] << 0) | ((u_int32_t)doo.data[1] << 8) |
+         ((u_int32_t)doo.data[2] << 16) | ((u_int32_t)doo.data[3] << 24);
 }
 
 __constant__ u_char IP[64] = {
@@ -260,10 +260,11 @@ __device__ void des_init(crypt_des_data *data) {
    * Invert the P-box permutation, and convert into OR-masks for
    * handling the output of the S-box arrays setup above.
    */
-  for (i = 0; i < 32; i++)
+  for (i = 0; i < 32; i++) {
     data->un_pbox[pbox[i] - 1] = (u_char)i;
+  }
 
-  for (b = 0; b < 4; b++)
+  for (b = 0; b < 4; b++) {
     for (i = 0; i < 256; i++) {
       *(p = &data->psbox[b][i]) = 0L;
       for (j = 0; j < 8; j++) {
@@ -271,6 +272,7 @@ __device__ void des_init(crypt_des_data *data) {
           *p |= bits32[data->un_pbox[8 * b + j]];
       }
     }
+  }
 
   data->des_initialised = 1;
 }
@@ -490,7 +492,7 @@ __device__ int des_cipher(const char *in, char *out, u_long salt, int count,
 
 __device__ char *crypt_des_cuda(const char *key, const char *setting,
                                 crypt_des_data *data) {
-  int i;
+  // int i;
   u_int32_t count, salt, l, r0, r1, keybuf[2];
   u_char *p, *q;
 

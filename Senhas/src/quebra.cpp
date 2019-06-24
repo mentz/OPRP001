@@ -15,6 +15,9 @@
 #include <string>
 #include <vector>
 
+#define MIN(a, b) ((a < b) ? a : b)
+#define MAX(a, b) ((a > b) ? a : b)
+
 #define WAIT_TIME 100
 
 int stop = 0;
@@ -253,9 +256,8 @@ int main(int argc, char *argv[]) {
         // fprintf(stdout, "(%s == %s) %s\n", crypt_pointer->crypt_3_buf,
         //         cifras[e], (ok) ? "TRUE" : "");
         if (ok) {
-          // printf("%d,%d %s %s\n", mpi_rank, thread_rank, cifras[e],
-          //        senha.getSenha());
-          // fflush(stdout);
+          printf("%s %s\n", cifras[e], senha.getSenha());
+          fflush(stdout);
           solucoes[cifras[e]] = senha.getSenha();
           int next_done = e;
 

@@ -3,8 +3,8 @@
 
 #include <string.h>
 
-#define MIN(a, b) ((a < b) ? a : b)
-#define MAX(a, b) ((a > b) ? a : b)
+// #define MIN(a, b) ((a < b) ? a : b)
+// #define MAX(a, b) ((a > b) ? a : b)
 #define BASE64_CRYPT                                                           \
   "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
