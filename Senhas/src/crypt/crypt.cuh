@@ -133,7 +133,10 @@ __constant__ u_char bits8[8] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 __constant__ u_char ascii64[] =
     "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-__device__ inline int ascii_to_bin(char ch) {
+__constant__ u_char bit7[] =
+    "\0./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+__device__ int ascii_to_bin(char ch) {
   if (ch > 'z')
     return (0);
   if (ch >= 'a')

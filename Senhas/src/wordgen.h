@@ -6,7 +6,7 @@
 // #define MIN(a, b) ((a < b) ? a : b)
 // #define MAX(a, b) ((a > b) ? a : b)
 #define BASE64_CRYPT                                                           \
-  "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+  "\0./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 typedef unsigned long long ull;
 
@@ -14,7 +14,7 @@ static int maxSize = 64;
 
 class Senha {
 private:
-  char senha[32];
+  char senha[16];
   int vetor[8];
 
   void avancarN(int n) {
@@ -24,10 +24,10 @@ private:
     vetor[pos] += n;
     while ((overflow = (vetor[pos] / maxSize)) > 0 && pos < 8) {
       vetor[pos] = vetor[pos] % maxSize;
-      senha[pos] = BASE64_CRYPT[vetor[pos]];
+      senha[pos] = BASE64_CRYPT[vetor[pos] + 1];
       vetor[++pos] += overflow;
     }
-    senha[pos] = BASE64_CRYPT[vetor[pos]];
+    senha[pos] = BASE64_CRYPT[vetor[pos] + 1];
 
     // senha[0] = BASE64_CRYPT[vetor[0]];
     // senha[1] = BASE64_CRYPT[vetor[1]];
@@ -50,7 +50,6 @@ public:
     vetor[6] = -1;
     vetor[7] = -1;
     memset(senha, 0, sizeof(char) * 16);
-    senha[0] = BASE64_CRYPT[0];
     avancarN(comeco);
   }
 
@@ -64,7 +63,7 @@ public:
     vetor[6] = -1;
     vetor[7] = -1;
     memset(senha, 0, sizeof(char) * 16);
-    senha[0] = BASE64_CRYPT[0];
+    avancarN(0);
   }
 
   char *getSenha() { return senha; }

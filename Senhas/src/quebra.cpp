@@ -41,8 +41,11 @@ void mpi_master_relay() {
   while (!stop) {
     int flag;
     MPI_Irecv(&next_done, 1, MPI_INT, MPI_ANY_SOURCE, 0, comm, &request);
-    sleep_for(WAIT_TIME);
     MPI_Test(&request, &flag, &status);
+    while (!stop && !flag) {
+      sleep_for(WAIT_TIME);
+      MPI_Test(&request, &flag, &status);
+    }
     if (flag) {
       done.insert(next_done);
 
@@ -58,6 +61,13 @@ void mpi_master_relay() {
 
       // Replicar para os workers
       MPI_Bcast(&next_done, 1, MPI_INT, 0, comm);
+    } else {
+      // I must die :(
+      MPI_Cancel(&request);
+      flag = false;
+      do {
+        MPI_Test_cancelled(&status, &flag);
+      } while (!flag);
     }
   }
 }
@@ -76,8 +86,10 @@ void mpi_worker_listener() {
     // Receber int K do broadcast do root
     //   adicionar esse int K no set done.
     MPI_Ibcast(&next_done, 1, MPI_INT, 0, comm, &request);
-    sleep_for(WAIT_TIME);
-    MPI_Test(&request, &flag, &status);
+    do {
+      sleep_for(WAIT_TIME);
+      MPI_Test(&request, &flag, &status);
+    } while (!stop && !flag);
     if (flag) {
 // Processar a lista para que o master também retire os prontos
 #pragma omp critical(falta_global)

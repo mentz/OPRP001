@@ -98,21 +98,23 @@ void force_stop(int signal) {
   stop = 1;
 }
 
-__global__ void cuda_do_des(char **cifra, bool *resolvido, char **solucao,
-                            int *sal_por_cifra, int num_cifras, char **sal,
+__global__ void cuda_do_des(char *cifra, bool *resolvido, char *solucao,
+                            int *sal_por_cifra, int num_cifras, char *sal,
                             int num_sais, ll inicio, int intervalo,
                             int run_count) {
+  int thread = threadIdx.x;
   ll start = threadIdx.x + inicio;
   ll step = blockDim.x * intervalo;
+
+  printf("GPU thread %d starting at %lld with step %lld!\n", thread, start,
+         step);
 
   crypt_des_data meu_crypt_data;
 
   char senha[16] = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
   char *result;
-  char *ssenha = (char *)malloc(sizeof(char) * 16 * num_sais);
-  char **cifrados = (char **)malloc(sizeof(char *) * num_sais);
-  for (int i = 0; i < num_sais; i++)
-    cifrados[i] = &ssenha[i * 16];
+  char *ssenha;
+  char *cifrados = (char *)malloc(sizeof(char) * 16 * num_sais);
 
   ll vetor[8] = {start, -1, -1, -1, -1, -1, -1, -1};
   static int maxSize = 64;
@@ -127,41 +129,43 @@ __global__ void cuda_do_des(char **cifra, bool *resolvido, char **solucao,
     }
     // senha[pos] = ascii64[vetor[pos]];
 
-    senha[0] = ascii64[vetor[0]];
-    senha[1] = ascii64[vetor[1]];
-    senha[2] = ascii64[vetor[2]];
-    senha[3] = ascii64[vetor[3]];
-    senha[4] = ascii64[vetor[4]];
-    senha[5] = ascii64[vetor[5]];
-    senha[6] = ascii64[vetor[6]];
-    senha[7] = ascii64[vetor[7]];
+    senha[0] = bit7[vetor[0] + 1];
+    senha[1] = bit7[vetor[1] + 1];
+    senha[2] = bit7[vetor[2] + 1];
+    senha[3] = bit7[vetor[3] + 1];
+    senha[4] = bit7[vetor[4] + 1];
+    senha[5] = bit7[vetor[5] + 1];
+    senha[6] = bit7[vetor[6] + 1];
+    senha[7] = bit7[vetor[7] + 1];
 
     for (int i = 0; i < num_sais; i++) {
-      result = crypt_des_cuda(senha, cifra[i], &meu_crypt_data);
+      int desloc = i * 16;
+      result = crypt_des_cuda(senha, &sal[desloc], &meu_crypt_data);
 
       // Copiar para o vetor
-      for (int kkk = 0; kkk < 8; kkk++) {
-        cifrados[i][kkk] = result[kkk];
+      for (int kkk = 0; kkk < 13; kkk++) {
+        cifrados[desloc + kkk] = result[kkk];
       }
-      cifrados[i][8] = 0;
+      cifrados[desloc + 13] = 0;
+      // printf("%s + %s -> %s\n", senha, &sal[desloc], &cifrados[desloc]);
     }
 
     for (int i = 0; i < num_cifras; i++) {
       if (!resolvido[i]) {
-        ssenha = cifrados[sal_por_cifra[i]];
-        if (strncmp_cuda(ssenha, cifra[i], 13) == 0) {
+        ssenha = &cifrados[sal_por_cifra[i] * 16];
+        if (strncmp_cuda(ssenha, &cifra[i * 16], 13) == 0) {
           resolvido[i] = true;
-          solucao[i][0] = senha[0];
-          solucao[i][1] = senha[1];
-          solucao[i][2] = senha[2];
-          solucao[i][3] = senha[3];
-          solucao[i][4] = senha[4];
-          solucao[i][5] = senha[5];
-          solucao[i][6] = senha[6];
-          solucao[i][7] = senha[7];
-          solucao[i][8] = '\0';
+          solucao[i * 16 + 0] = senha[0];
+          solucao[i * 16 + 1] = senha[1];
+          solucao[i * 16 + 2] = senha[2];
+          solucao[i * 16 + 3] = senha[3];
+          solucao[i * 16 + 4] = senha[4];
+          solucao[i * 16 + 5] = senha[5];
+          solucao[i * 16 + 6] = senha[6];
+          solucao[i * 16 + 7] = senha[7];
+          solucao[i * 16 + 8] = '\0';
 
-          printf("%s %s\n", cifra[i], ssenha);
+          printf("%s %s\n", &cifra[i * 16], senha);
         }
       }
     }
@@ -264,32 +268,43 @@ int main(int argc, char *argv[]) {
   char *todos_sais = new char[16 * num_sais];
   int sad = 0;
   for (auto &sal : sais) {
-    strcpy(&todos_sais[16 * sad++], sal.first.data());
+    // std::cout << sal.first << " e " << sal.second << "\n";
+    // strncpy(&todos_sais[16 * sad], sal.first.data(), 4);
+    sal.first.copy(&todos_sais[16 * sad], sal.first.size() + 1);
+    todos_sais[16 * sad + sal.first.size()] = '\0';
+    sad++;
   }
 
-  for (int i = 0; i < 16 * num_sais; i++) {
-    printf("%c", todos_sais[i]);
+  for (int i = 0; i < num_sais; i++) {
+    printf("%s\n", &todos_sais[i * 16]);
+    fflush(stdout);
   }
   printf("\n");
+  fflush(stdout);
 
-  // char *g_cifra, *g_solucao, *g_sal;
-  // cudaMalloc((void **)&g_cifra, sizeof(char) * 16 * num_cifras);
-  // cudaMalloc((void **)&g_solucao, sizeof(char) * 16 * num_cifras);
-  // cudaMalloc((void **)&g_sal, sizeof(char) * 16 * num_sais);
+  char *g_cifra, *g_solucao, *g_sal;
+  cudaMalloc((void **)&g_cifra, sizeof(char) * 16 * num_cifras);
+  cudaMalloc((void **)&g_solucao, sizeof(char) * 16 * num_cifras);
+  cudaMalloc((void **)&g_sal, sizeof(char) * 16 * num_sais);
 
-  // cudaMemcpy(g_cifra, cifras[0], sizeof(char) * 16 * num_cifras);
-  // cudaMemcpy(g_sal, todos_sais, sizeof(char) * 16 * num_sais);
+  cudaMemcpy(g_cifra, cifras[0], sizeof(char) * 16 * num_cifras,
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(g_sal, todos_sais, sizeof(char) * 16 * num_sais,
+             cudaMemcpyHostToDevice);
 
-  // bool *g_resolvido;
-  // cudaMalloc((void **)&g_resolvido, sizeof(bool) * num_cifras);
+  bool *g_resolvido;
+  cudaMalloc((void **)&g_resolvido, sizeof(bool) * num_cifras);
 
-  // int *g_sal_por_cifra;
-  // cudaMalloc((void **)&g_sal_por_cifra, sizeof(int) * num_cifras);
+  int *g_sal_por_cifra;
+  cudaMalloc((void **)&g_sal_por_cifra, sizeof(int) * num_cifras);
+  cudaMemcpy(g_sal_por_cifra, sal_por_indice.data(), sizeof(int) * num_cifras,
+             cudaMemcpyHostToDevice);
 
-  // cuda_do_des(g_cifra, g_resolvido, g_solucao, g_sal_por_cifra, int
-  // num_cifras,
-  //             char **sal, int num_sais, ll inicio, int intervalo,
-  //             int run_count);
+  dim3 grid(1);
+  dim3 blok(64);
+
+  cuda_do_des<<<grid, blok>>>(g_cifra, g_resolvido, g_solucao, g_sal_por_cifra,
+                              num_cifras, g_sal, num_sais, 0ll, 1, 266305);
 
   //   // Iniciar thread de sincronização entre MPI workers
   //   std::thread *sync_thread;
@@ -395,6 +410,7 @@ int main(int argc, char *argv[]) {
   // }
 
   //   MPI_Finalize();
+  cudaDeviceSynchronize();
 
   return 0;
 }
