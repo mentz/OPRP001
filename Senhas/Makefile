@@ -9,6 +9,9 @@ DEBFLAGS = -g -pg -O0
 quebra: src/quebra.cpp
 	mpic++ -o $@ $^ $(OPTIMIZATION) $(FLAGS)
 
+quebra2: src/quebra2.cpp
+	mpic++ -o quebra2 $^ $(OPTIMIZATION) $(FLAGS)
+
 teste: src/teste_wordgen.cpp
 	$(CC) -o $@ $^ $(OPTIMIZATION) $(FLAGS)
 

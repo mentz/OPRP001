@@ -18,7 +18,7 @@
 #define MIN(a, b) ((a < b) ? a : b)
 #define MAX(a, b) ((a > b) ? a : b)
 
-#define WAIT_TIME 100
+#define WAIT_TIME 15
 
 int stop = 0;
 int num_cifras = 0;
@@ -41,11 +41,10 @@ void mpi_master_relay() {
   while (!stop) {
     int flag;
     MPI_Irecv(&next_done, 1, MPI_INT, MPI_ANY_SOURCE, 0, comm, &request);
-    MPI_Test(&request, &flag, &status);
-    while (!stop && !flag) {
+    do {
       sleep_for(WAIT_TIME);
       MPI_Test(&request, &flag, &status);
-    }
+    } while (!stop && !flag);
     if (flag) {
       done.insert(next_done);
 
@@ -60,14 +59,31 @@ void mpi_master_relay() {
       fprintf(stderr, "P%d removendo cifra %d\n", mpi_rank, next_done);
 
       // Replicar para os workers
-      MPI_Bcast(&next_done, 1, MPI_INT, 0, comm);
+      MPI_Ibcast(&next_done, 1, MPI_INT, 0, comm, &request);
+      MPI_Test(&request, &flag, &status);
+      do {
+        sleep_for(WAIT_TIME);
+        MPI_Test(&request, &flag, &status);
+      } while (!stop && !flag);
+      if (!flag) {
+        // I must die :(
+        MPI_Cancel(&request);
+        MPI_Wait(&request, &status);
+        // flag = false;
+        // do {
+        //   sleep_for(WAIT_TIME);
+        //   MPI_Test_cancelled(&status, &flag);
+        // } while (!flag);
+      }
     } else {
       // I must die :(
       MPI_Cancel(&request);
-      flag = false;
-      do {
-        MPI_Test_cancelled(&status, &flag);
-      } while (!flag);
+      MPI_Wait(&request, &status);
+      // flag = false;
+      // do {
+      //   sleep_for(WAIT_TIME);
+      //   MPI_Test_cancelled(&status, &flag);
+      // } while (!flag);
     }
   }
 }
@@ -101,6 +117,15 @@ void mpi_worker_listener() {
       }
 
       fprintf(stderr, "P%d removendo cifra %d\n", mpi_rank, next_done);
+    } else {
+      // I must die :(
+      MPI_Cancel(&request);
+      MPI_Wait(&request, &status);
+      // flag = false;
+      // do {
+      //   sleep_for(WAIT_TIME);
+      //   MPI_Test_cancelled(&status, &flag);
+      // } while (!flag);
     }
   }
 }
@@ -252,6 +277,8 @@ int main(int argc, char *argv[]) {
       }
 
       for (auto &e : sais) {
+        if (stop)
+          break;
         crypt_pointer = &(crypt_data_por_sal[e.second]);
         result = crypt_r(senha.getSenha(), e.first.data(), crypt_pointer);
         // fprintf(stderr, "%-8s s%d = %s\n", senha.getSenha(), e.second,
@@ -259,6 +286,8 @@ int main(int argc, char *argv[]) {
       }
 
       for (auto &e : thread_falta) {
+        if (stop)
+          break;
         // printf("p%d t%d %s %s\n", mpi_rank, thread_rank, cifras[e],
         //        senha.getSenha());
         crypt_pointer = &(crypt_data_por_sal[sal_por_indice[e]]);
@@ -280,8 +309,11 @@ int main(int argc, char *argv[]) {
             }
 
             // Replicar para os workers
-            if (mpi_size > 1)
+            if (mpi_size > 1) {
+              // fprintf(stderr, "r0 started sending\n");
               MPI_Bcast(&next_done, 1, MPI_INT, 0, comm);
+              // fprintf(stderr, "r0 finished sending\n");
+            }
           } else {
             MPI_Send(&next_done, 1, MPI_INT, 0, 0, comm);
           }
@@ -298,6 +330,9 @@ int main(int argc, char *argv[]) {
     }
 #pragma omp barrier
   }
+  printf("p%d parei na barreira\n", mpi_rank);
+  MPI_Barrier(comm);
+  printf("p%d saí da barreira\n", mpi_rank);
   stop = true;
   if (mpi_size > 1) {
     sync_thread->join();
